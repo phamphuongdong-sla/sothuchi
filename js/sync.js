@@ -62,6 +62,7 @@
      * @returns {Object} { gasUrl, autoSync }
      */
     getSettings() {
+      const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzI9y7gVMLLob2lNltvGyzH5_ZA-XEav5MC-037FI7JzuWS38iQ6dTzitphHBkhC5HiQQ/exec';
       const storage = global.localStorage || (global.window && global.window.localStorage);
       if (storage) {
         try {
@@ -69,15 +70,15 @@
           if (data) {
             const parsed = JSON.parse(data);
             return {
-              gasUrl: parsed.gasUrl || '',
-              autoSync: parsed.autoSync !== undefined ? Boolean(parsed.autoSync) : false
+              gasUrl: parsed.gasUrl || DEFAULT_GAS_URL,
+              autoSync: parsed.autoSync !== undefined ? Boolean(parsed.autoSync) : true
             };
           }
         } catch (e) {
           console.error('[SyncEngine] Failed to parse settings JSON:', e);
         }
       }
-      return { gasUrl: '', autoSync: false };
+      return { gasUrl: DEFAULT_GAS_URL, autoSync: true };
     }
 
     /**
