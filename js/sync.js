@@ -150,14 +150,49 @@
       this.updateStatusIndicator('syncing');
 
       const fetchFn = global.fetch || (global.window && global.window.fetch);
+      const payloadObj = {
+        action: 'syncBatch',
+        transactions: payloadTransactions
+      };
+
+      // 1. Try GET syncBatch query parameter (survives Google Apps Script 302 redirects with query params intact)
+      try {
+        const encodedPayload = encodeURIComponent(JSON.stringify(payloadObj));
+        const syncGetUrl = settings.gasUrl + (settings.gasUrl.includes('?') ? '&' : '?') + 'action=syncBatch&payload=' + encodedPayload;
+        const resGet = await fetchFn(syncGetUrl, { method: 'GET' });
+
+        if (resGet.ok) {
+          const jsonGet = await resGet.json();
+          if (jsonGet.status === 'success') {
+            const syncedIds = jsonGet.synced_ids || payloadTransactions.map(t => t.id);
+
+            const updatedTxs = db.getTransactions().map(t => {
+              if (syncedIds.includes(t.id)) {
+                if (t.sync_status === 'pending_delete') {
+                  return null;
+                }
+                return { ...t, sync_status: 'synced' };
+              }
+              return t;
+            }).filter(Boolean);
+
+            db.saveTransactions(updatedTxs);
+            this.isSyncing = false;
+            this.retryCount = 0;
+            this.updateStatusIndicator('success');
+            return { success: true, syncedCount: syncedIds.length };
+          }
+        }
+      } catch (getErr) {
+        console.warn('[SyncEngine] GET syncBatch failed, trying POST fallback:', getErr);
+      }
+
+      // 2. Fallback to POST method
       try {
         const res = await fetchFn(settings.gasUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'syncBatch',
-            transactions: payloadTransactions
-          })
+          body: JSON.stringify(payloadObj)
         });
 
         if (!res.ok) {
