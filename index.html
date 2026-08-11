@@ -383,6 +383,49 @@
           </div>
         </div>
 
+        <!-- Account Security & Change Password Card -->
+        <div class="card settings-card mt-4">
+          <div class="card-header">
+            <h3 class="card-title">🔐 Bảo Mật Tài Khoản & Đổi Mật Khẩu</h3>
+            <p class="card-subtitle">Đổi mật khẩu / mã PIN cá nhân cho tài khoản <strong id="settings-user-info">Phạm Phương Đông (phamphuongdong@gmail.com)</strong></p>
+          </div>
+          <form id="form-change-password" class="settings-form" style="margin-top: 1rem;">
+            <div class="form-group">
+              <label for="pw-old-input" class="form-label">Mật khẩu hiện tại <span class="required-star">*</span></label>
+              <input type="password" id="pw-old-input" class="form-control" placeholder="Nhập mật khẩu hiện tại (Mặc định: 123456)" required>
+            </div>
+            <div class="form-group">
+              <label for="pw-new-input" class="form-label">Mật khẩu mới <span class="required-star">*</span></label>
+              <input type="password" id="pw-new-input" class="form-control" placeholder="Mật khẩu mới (Tối thiểu 4 ký tự)" required minlength="4">
+            </div>
+            <div class="form-group">
+              <label for="pw-confirm-input" class="form-label">Xác nhận mật khẩu mới <span class="required-star">*</span></label>
+              <input type="password" id="pw-confirm-input" class="form-control" placeholder="Nhập lại mật khẩu mới" required minlength="4">
+            </div>
+            <div class="form-actions">
+              <button type="submit" id="btn-save-password" class="btn btn-primary">
+                🔑 Cập Nhật Mật Khẩu
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Role-Based Permissions Card -->
+        <div class="card settings-card mt-4">
+          <div class="card-header">
+            <h3 class="card-title">🛡️ Phân Quyền Truy Cập Tài Khoản</h3>
+            <p class="card-subtitle">Thiết lập quyền hạn thao tác cho người dùng trên ứng dụng Sổ Thu Chi</p>
+          </div>
+          <div class="form-group" style="margin-top: 1rem;">
+            <label for="select-user-role" class="form-label">Vai trò tài khoản hiện tại</label>
+            <select id="select-user-role" class="form-control">
+              <option value="admin">👑 Quản trị viên (Admin) - Toàn quyền xem, nhập, sửa, xóa & cài đặt</option>
+              <option value="member">👤 Thành viên (Member) - Được xem & nhập thu chi, không được đổi cài đặt hệ thống</option>
+              <option value="viewer">👁️ Người xem (Viewer) - Chỉ được xem báo cáo & lịch sử giao dịch</option>
+            </select>
+          </div>
+        </div>
+
         <div class="card settings-card mt-4">
           <div class="card-header">
             <h3 class="card-title">📱 Hướng Dẫn Cài Đặt PWA Lên Điện Thoại</h3>
