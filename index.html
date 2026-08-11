@@ -37,8 +37,8 @@
         <span class="app-title">Sổ Thu Chi</span>
       </div>
       <div class="header-actions">
-        <!-- Sync Status Indicator -->
-        <div id="sync-status" class="sync-status status-offline" title="Trạng thái đồng bộ Google Sheets">
+        <!-- Hidden Sync Status Indicator for Contract Compatibility -->
+        <div id="sync-status" class="sync-status status-offline" title="Trạng thái đồng bộ Google Sheets" style="display: none;" hidden>
           <span class="status-dot"></span>
           <span class="status-text">Ngoại tuyến</span>
         </div>
@@ -46,16 +46,10 @@
         <button id="theme-toggle" class="icon-btn" aria-label="Đổi giao diện Dark/Light Mode" type="button" title="Giao diện Sáng/Tối">
           <span class="theme-icon" aria-hidden="true">🌙</span>
         </button>
-        <!-- Quick Lock App Button -->
-        <button id="btn-lock-app" class="icon-btn" aria-label="Khóa ứng dụng ngay lập tức" type="button" title="Khóa ứng dụng" data-action="logout" onclick="if(window.Auth) window.Auth.logout();">
+        <!-- Lock App Button -->
+        <button id="btn-lock-app" class="icon-btn" aria-label="Khóa ứng dụng" type="button" title="Khóa ứng dụng" data-action="logout" onclick="if(window.Auth) window.Auth.logout();">
           <span class="lock-icon" aria-hidden="true">🔒</span>
         </button>
-        <!-- User Avatar & Quick Logout -->
-        <div id="header-user-badge" class="user-avatar-badge">
-          <button type="button" class="btn-avatar-profile" data-action="logout" title="Tài khoản Phạm Phương Đông (Bấm để đăng xuất)" onclick="if(window.Auth) window.Auth.logout();">
-            <span class="avatar-emoji">👨‍💼</span>
-          </button>
-        </div>
       </div>
     </header>
 
