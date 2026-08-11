@@ -476,7 +476,10 @@
       // Duplicate check (case-insensitive per type)
       const duplicate = cats.find(c => c.type === targetType && c.name.toLowerCase() === trimmedName.toLowerCase());
       if (duplicate) {
-        return duplicate;
+        if (data.allowDuplicateReturn || data.isImport || data.mergeIfExists) {
+          return duplicate;
+        }
+        throw new Error('Tên hạng mục đã tồn tại');
       }
 
       const newCategory = normalizeCategory({

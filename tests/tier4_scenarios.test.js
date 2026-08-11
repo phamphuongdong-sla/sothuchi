@@ -62,8 +62,8 @@ async function runTier4Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
     TestAssert.isOk(env.context.CategoryManager, 'CategoryManager module must be loaded');
     
     // Step 1: Create custom categories
-    const petCat = env.context.CategoryManager.addCategory({ name: 'Thú cưng', type: 'expense', icon: '🐶' });
-    const insuranceCat = env.context.CategoryManager.addCategory({ name: 'Bảo hiểm', type: 'expense', icon: '🛡️' });
+    const petCat = env.context.CategoryManager.addCategory({ name: 'Thú cưng riêng', type: 'expense', icon: '🐶' });
+    const insuranceCat = env.context.CategoryManager.addCategory({ name: 'Bảo hiểm riêng', type: 'expense', icon: '🛡️' });
     
     // Step 2: Add transactions under new categories
     env.context.DB.addTransaction({ amount: 300000, category: petCat.name, note: 'Thức ăn cho cún' });
@@ -71,7 +71,7 @@ async function runTier4Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
     env.context.DB.addTransaction({ amount: 1500000, category: insuranceCat.name, note: 'Bảo hiểm y tế tháng 8' });
     
     // Step 3: Filter history by custom category
-    const petHistory = env.context.HistoryManager.filterTransactions({ category: 'Thú cưng' });
+    const petHistory = env.context.HistoryManager.filterTransactions({ category: 'Thú cưng riêng' });
     TestAssert.equal(petHistory.length, 2);
     
     // Step 4: Inspect Category Breakdown Report metrics

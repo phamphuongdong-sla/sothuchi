@@ -70,7 +70,7 @@
           if (data) {
             const parsed = JSON.parse(data);
             return {
-              gasUrl: parsed.gasUrl || DEFAULT_GAS_URL,
+              gasUrl: parsed.gasUrl !== undefined ? parsed.gasUrl : DEFAULT_GAS_URL,
               autoSync: parsed.autoSync !== undefined ? Boolean(parsed.autoSync) : true
             };
           }
