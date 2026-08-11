@@ -293,6 +293,14 @@
           const mergedArray = Array.from(localMap.values());
           db.saveTransactions(mergedArray);
 
+          // Update Categories if provided from sheet "DanhMuc"
+          if (Array.isArray(json.categories) && json.categories.length > 0) {
+            const catMgr = global.CategoryManager || (global.window && global.window.CategoryManager);
+            if (catMgr && typeof catMgr.mergeRemoteCategories === 'function') {
+              catMgr.mergeRemoteCategories(json.categories);
+            }
+          }
+
           this.isSyncing = false;
           this.updateStatusIndicator('success');
           return { success: true, pulledCount: remoteTxs.length };

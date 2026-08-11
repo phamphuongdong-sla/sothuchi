@@ -1,17 +1,23 @@
 /**
- * Code.gs - Google Apps Script Web App Endpoint Backend
- * Standard 8-column Google Sheets Backend for Sổ Thu Chi Cá Nhân (PWA).
+ * Code.gs - Google Apps Script Multi-Sheet Endpoint Backend
  * 
- * Column Schema:
- * [ID, Ngày, Loại, Hạng mục, Số tiền, Ghi chú, Thời gian tạo, Thời gian cập nhật]
+ * Multi-Sheet Database Architecture:
+ * 1. Sheet "GiaoDich" : [ID, Ngày, Loại, Hạng mục, Số tiền, Ghi chú, Thời gian tạo, Thời gian cập nhật]
+ * 2. Sheet "DanhMuc"  : [ID, Tên Hạng Mục, Nhóm Chính, Loại, Icon, Màu Sắc, Trạng Thái]
+ * 3. Sheet "CauHinh"  : [Tên Cấu Hình, Giá Trị, Ghi Chú]
  */
 
-const SHEET_NAME = 'GiaoDich';
-const HEADERS = ['ID', 'Ngày', 'Loại', 'Hạng mục', 'Số tiền', 'Ghi chú', 'Thời gian tạo', 'Thời gian cập nhật'];
+const SHEET_TX = 'GiaoDich';
+const HEADERS_TX = ['ID', 'Ngày', 'Loại', 'Hạng mục', 'Số tiền', 'Ghi chú', 'Thời gian tạo', 'Thời gian cập nhật'];
+
+const SHEET_CAT = 'DanhMuc';
+const HEADERS_CAT = ['ID', 'Tên Hạng Mục', 'Nhóm Chính', 'Loại', 'Icon', 'Màu Sắc', 'Trạng Thái'];
+
+const SHEET_CFG = 'CauHinh';
+const HEADERS_CFG = ['Tên Cấu Hình', 'Giá Trị', 'Ghi Chú'];
 
 /**
  * Handle HTTP GET Requests
- * Actions: ping, fetchAll
  */
 function doGet(e) {
   const lock = LockService.getScriptLock();
@@ -25,7 +31,7 @@ function doGet(e) {
     const action = params.action || 'fetchAll';
 
     if (action === 'ping') {
-      return responseJSON({ status: 'ok', version: '1.0' });
+      return responseJSON({ status: 'ok', version: '2.0', architecture: 'Multi-Sheet' });
     }
 
     if (action === 'syncBatch') {
@@ -45,13 +51,13 @@ function doGet(e) {
     }
 
     if (action === 'fetchAll') {
-      const sheet = getOrCreateSheet();
-      const rows = sheet.getDataRange().getValues();
+      const sheetTx = getOrCreateNamedSheet(SHEET_TX, HEADERS_TX);
+      const rowsTx = sheetTx.getDataRange().getValues();
       const transactions = [];
 
-      if (rows.length > 1) {
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
+      if (rowsTx.length > 1) {
+        for (let i = 1; i < rowsTx.length; i++) {
+          const row = rowsTx[i];
           if (!row[0]) continue;
           transactions.push({
             id: String(row[0]),
@@ -67,10 +73,44 @@ function doGet(e) {
         }
       }
 
+      // Fetch Categories from Sheet "DanhMuc"
+      const sheetCat = getOrCreateNamedSheet(SHEET_CAT, HEADERS_CAT);
+      const rowsCat = sheetCat.getDataRange().getValues();
+      const categories = [];
+
+      if (rowsCat.length > 1) {
+        for (let i = 1; i < rowsCat.length; i++) {
+          const row = rowsCat[i];
+          if (!row[0]) continue;
+          categories.push({
+            id: String(row[0]),
+            name: String(row[1]),
+            group: String(row[2] || ''),
+            type: String(row[3] || 'expense'),
+            icon: String(row[4] || '📁'),
+            color: String(row[5] || '#ef4444'),
+            is_hidden: String(row[6]) === 'Ẩn'
+          });
+        }
+      }
+
+      // Fetch Config from Sheet "CauHinh"
+      const sheetCfg = getOrCreateNamedSheet(SHEET_CFG, HEADERS_CFG);
+      const rowsCfg = sheetCfg.getDataRange().getValues();
+      const config = {};
+
+      if (rowsCfg.length > 1) {
+        for (let i = 1; i < rowsCfg.length; i++) {
+          const row = rowsCfg[i];
+          if (row[0]) config[String(row[0])] = String(row[1] || '');
+        }
+      }
+
       return responseJSON({
         status: 'success',
         transactions: transactions,
-        categories: []
+        categories: categories,
+        config: config
       });
     }
 
@@ -83,10 +123,10 @@ function doGet(e) {
 }
 
 /**
- * Shared syncBatch processor used by both doGet and doPost
+ * Shared syncBatch processor used for Sheet "GiaoDich"
  */
 function processSyncBatch(txs) {
-  const sheet = getOrCreateSheet();
+  const sheet = getOrCreateNamedSheet(SHEET_TX, HEADERS_TX);
   const syncedIds = [];
 
   (txs || []).forEach(function(tx) {
@@ -98,34 +138,18 @@ function processSyncBatch(txs) {
     const updatedAt = tx.updated_at || tx.updatedAt || nowIso;
 
     if (tx.sync_status === 'pending_delete') {
-      if (rowIdx !== -1) {
-        sheet.deleteRow(rowIdx);
-      }
+      if (rowIdx !== -1) sheet.deleteRow(rowIdx);
       syncedIds.push(tx.id);
     } else if (rowIdx !== -1) {
-      // Update existing row
       sheet.getRange(rowIdx, 1, 1, 8).setValues([[
-        tx.id,
-        dateVal,
-        tx.type || 'expense',
-        tx.category || 'Khác',
-        Number(tx.amount) || 0,
-        tx.note || '',
-        createdAt,
-        updatedAt
+        tx.id, dateVal, tx.type || 'expense', tx.category || 'Khác',
+        Number(tx.amount) || 0, tx.note || '', createdAt, updatedAt
       ]]);
       syncedIds.push(tx.id);
     } else {
-      // Append new row
       sheet.appendRow([
-        tx.id,
-        dateVal,
-        tx.type || 'expense',
-        tx.category || 'Khác',
-        Number(tx.amount) || 0,
-        tx.note || '',
-        createdAt,
-        updatedAt
+        tx.id, dateVal, tx.type || 'expense', tx.category || 'Khác',
+        Number(tx.amount) || 0, tx.note || '', createdAt, updatedAt
       ]);
       syncedIds.push(tx.id);
     }
@@ -139,7 +163,6 @@ function processSyncBatch(txs) {
 
 /**
  * Handle HTTP POST Requests
- * Actions: syncBatch
  */
 function doPost(e) {
   const lock = LockService.getScriptLock();
@@ -154,10 +177,8 @@ function doPost(e) {
     }
 
     let payload;
-    try {
-      payload = JSON.parse(e.postData.contents);
-    } catch (parseErr) {
-      return responseJSON({ status: 'error', message: 'Malformed JSON payload: ' + parseErr.toString() });
+    try { payload = JSON.parse(e.postData.contents); } catch (parseErr) {
+      return responseJSON({ status: 'error', message: 'Malformed JSON payload' });
     }
 
     if (!payload || !payload.action) {
@@ -168,6 +189,32 @@ function doPost(e) {
       return processSyncBatch(payload.transactions || []);
     }
 
+    if (payload.action === 'saveCategories') {
+      const sheetCat = getOrCreateNamedSheet(SHEET_CAT, HEADERS_CAT);
+      sheetCat.clearContents();
+      sheetCat.appendRow(HEADERS_CAT);
+
+      (payload.categories || []).forEach(c => {
+        sheetCat.appendRow([
+          c.id || '', c.name || '', c.group || '', c.type || 'expense',
+          c.icon || '📁', c.color || '#ef4444', c.is_hidden ? 'Ẩn' : 'Hiển thị'
+        ]);
+      });
+      return responseJSON({ status: 'success', count: (payload.categories || []).length });
+    }
+
+    if (payload.action === 'saveConfig') {
+      const sheetCfg = getOrCreateNamedSheet(SHEET_CFG, HEADERS_CFG);
+      sheetCfg.clearContents();
+      sheetCfg.appendRow(HEADERS_CFG);
+
+      const cfgObj = payload.config || {};
+      Object.keys(cfgObj).forEach(k => {
+        sheetCfg.appendRow([k, String(cfgObj[k] || ''), 'Config item']);
+      });
+      return responseJSON({ status: 'success' });
+    }
+
     return responseJSON({ status: 'error', message: 'Unsupported POST action: ' + payload.action });
   } catch (err) {
     return responseJSON({ status: 'error', message: err.toString() });
@@ -176,85 +223,46 @@ function doPost(e) {
   }
 }
 
-/**
- * Get or create Spreadsheet sheet with header auto-initialization
- */
-function getOrCreateSheet() {
+function getOrCreateNamedSheet(name, headers) {
   let ss;
-  try {
-    ss = SpreadsheetApp.getActiveSpreadsheet();
-  } catch (e) {
-    ss = null;
-  }
+  try { ss = SpreadsheetApp.getActiveSpreadsheet(); } catch (e) { ss = null; }
   if (!ss) return new MockSheet();
 
-  let sheet = ss.getSheetByName(SHEET_NAME);
+  let sheet = ss.getSheetByName(name);
   if (!sheet) {
-    sheet = ss.insertSheet(SHEET_NAME);
-    sheet.appendRow(HEADERS);
+    sheet = ss.insertSheet(name);
+    sheet.appendRow(headers);
   } else if (sheet.getLastRow() === 0) {
-    sheet.appendRow(HEADERS);
+    sheet.appendRow(headers);
   }
   return sheet;
 }
 
-/**
- * Find 1-indexed row index by Transaction ID
- */
 function findRowIndexById(sheet, id) {
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(id)) {
-      return i + 1;
-    }
+    if (String(data[i][0]) === String(id)) return i + 1;
   }
   return -1;
 }
 
-/**
- * Format date string
- */
 function formatDate(val) {
   if (!val) return new Date().toISOString().split('T')[0];
-  if (val instanceof Date) {
-    return val.toISOString().split('T')[0];
-  }
+  if (val instanceof Date) return val.toISOString().split('T')[0];
   return String(val).split('T')[0];
 }
 
-/**
- * Helper to construct JSON response with proper MimeType
- */
 function responseJSON(obj) {
-  if (typeof ContentService !== 'undefined') {
-    return ContentService.createTextOutput(JSON.stringify(obj))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-  return obj;
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
-/**
- * MockSheet fallback for isolated testing
- */
 function MockSheet() {
-  this.rows = [HEADERS];
-  this.getDataRange = function() {
-    return { getValues: () => this.rows };
-  };
-  this.appendRow = function(row) {
-    this.rows.push(row);
-  };
-  this.deleteRow = function(idx) {
-    this.rows.splice(idx - 1, 1);
-  };
-  this.getLastRow = function() {
-    return this.rows.length;
-  };
-  this.getRange = function(r, c, nr, nc) {
-    return {
-      setValues: (vals) => {
-        this.rows[r - 1] = vals[0];
-      }
-    };
-  };
+  this.getValues = () => [];
+  this.getDataRange = () => ({ getValues: () => [] });
+  this.appendRow = () => {};
+  this.deleteRow = () => {};
+  this.clearContents = () => {};
+  this.getLastRow = () => 0;
+  this.getRange = () => ({ setValues: () => {} });
 }

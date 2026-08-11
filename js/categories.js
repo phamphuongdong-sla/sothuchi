@@ -417,6 +417,22 @@
       return newGroup;
     },
 
+    mergeRemoteCategories(remoteCats) {
+      if (!Array.isArray(remoteCats) || remoteCats.length === 0) return;
+      const localCats = readFromStorage();
+      const catMap = new Map(localCats.map(c => [c.id || c.name, c]));
+
+      remoteCats.forEach(rc => {
+        const norm = normalizeCategory(rc);
+        if (norm) {
+          catMap.set(norm.id || norm.name, norm);
+        }
+      });
+
+      const merged = Array.from(catMap.values());
+      saveToStorage(merged);
+    },
+
     getByGroup(groupNameOrId) {
       const cats = readFromStorage();
       if (!groupNameOrId) return cats;
