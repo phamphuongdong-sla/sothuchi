@@ -476,7 +476,7 @@
       // Duplicate check (case-insensitive per type)
       const duplicate = cats.find(c => c.type === targetType && c.name.toLowerCase() === trimmedName.toLowerCase());
       if (duplicate) {
-        throw new Error('Tên hạng mục đã tồn tại');
+        return duplicate;
       }
 
       const newCategory = normalizeCategory({
