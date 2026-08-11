@@ -28,6 +28,22 @@ function doGet(e) {
       return responseJSON({ status: 'ok', version: '1.0' });
     }
 
+    if (action === 'syncBatch') {
+      let txs = [];
+      if (params.payload) {
+        try {
+          const parsed = JSON.parse(decodeURIComponent(params.payload));
+          txs = parsed.transactions || [];
+        } catch (pe) {
+          try {
+            const parsed = JSON.parse(params.payload);
+            txs = parsed.transactions || [];
+          } catch (pe2) {}
+        }
+      }
+      return processSyncBatch(txs);
+    }
+
     if (action === 'fetchAll') {
       const sheet = getOrCreateSheet();
       const rows = sheet.getDataRange().getValues();
@@ -67,6 +83,61 @@ function doGet(e) {
 }
 
 /**
+ * Shared syncBatch processor used by both doGet and doPost
+ */
+function processSyncBatch(txs) {
+  const sheet = getOrCreateSheet();
+  const syncedIds = [];
+
+  (txs || []).forEach(function(tx) {
+    if (!tx || !tx.id) return;
+    const rowIdx = findRowIndexById(sheet, tx.id);
+    const nowIso = new Date().toISOString();
+    const dateVal = tx.date || nowIso.split('T')[0];
+    const createdAt = tx.created_at || tx.createdAt || nowIso;
+    const updatedAt = tx.updated_at || tx.updatedAt || nowIso;
+
+    if (tx.sync_status === 'pending_delete') {
+      if (rowIdx !== -1) {
+        sheet.deleteRow(rowIdx);
+      }
+      syncedIds.push(tx.id);
+    } else if (rowIdx !== -1) {
+      // Update existing row
+      sheet.getRange(rowIdx, 1, 1, 8).setValues([[
+        tx.id,
+        dateVal,
+        tx.type || 'expense',
+        tx.category || 'Khác',
+        Number(tx.amount) || 0,
+        tx.note || '',
+        createdAt,
+        updatedAt
+      ]]);
+      syncedIds.push(tx.id);
+    } else {
+      // Append new row
+      sheet.appendRow([
+        tx.id,
+        dateVal,
+        tx.type || 'expense',
+        tx.category || 'Khác',
+        Number(tx.amount) || 0,
+        tx.note || '',
+        createdAt,
+        updatedAt
+      ]);
+      syncedIds.push(tx.id);
+    }
+  });
+
+  return responseJSON({
+    status: 'success',
+    synced_ids: syncedIds
+  });
+}
+
+/**
  * Handle HTTP POST Requests
  * Actions: syncBatch
  */
@@ -94,56 +165,7 @@ function doPost(e) {
     }
 
     if (payload.action === 'syncBatch') {
-      const sheet = getOrCreateSheet();
-      const txs = payload.transactions || [];
-      const syncedIds = [];
-
-      txs.forEach(function(tx) {
-        if (!tx || !tx.id) return;
-        const rowIdx = findRowIndexById(sheet, tx.id);
-        const nowIso = new Date().toISOString();
-        const dateVal = tx.date || nowIso.split('T')[0];
-        const createdAt = tx.created_at || tx.createdAt || nowIso;
-        const updatedAt = tx.updated_at || tx.updatedAt || nowIso;
-
-        if (tx.sync_status === 'pending_delete') {
-          if (rowIdx !== -1) {
-            sheet.deleteRow(rowIdx);
-          }
-          syncedIds.push(tx.id);
-        } else if (rowIdx !== -1) {
-          // Update existing row
-          sheet.getRange(rowIdx, 1, 1, 8).setValues([[
-            tx.id,
-            dateVal,
-            tx.type || 'expense',
-            tx.category || 'Khác',
-            Number(tx.amount) || 0,
-            tx.note || '',
-            createdAt,
-            updatedAt
-          ]]);
-          syncedIds.push(tx.id);
-        } else {
-          // Append new row
-          sheet.appendRow([
-            tx.id,
-            dateVal,
-            tx.type || 'expense',
-            tx.category || 'Khác',
-            Number(tx.amount) || 0,
-            tx.note || '',
-            createdAt,
-            updatedAt
-          ]);
-          syncedIds.push(tx.id);
-        }
-      });
-
-      return responseJSON({
-        status: 'success',
-        synced_ids: syncedIds
-      });
+      return processSyncBatch(payload.transactions || []);
     }
 
     return responseJSON({ status: 'error', message: 'Unsupported POST action: ' + payload.action });

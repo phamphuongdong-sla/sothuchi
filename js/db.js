@@ -168,6 +168,18 @@
     saveTransactions(txs) {
       const normalized = (txs || []).map(normalizeTransaction).filter(Boolean);
       this._setItem(KEYS.TX, JSON.stringify(normalized), KEYS.TX_ALT);
+
+      // Auto-trigger SyncEngine pushSync immediately after saving local DB
+      if (typeof window !== 'undefined') {
+        const syncInst = window.SyncEngine || window.SyncManager;
+        if (syncInst && typeof syncInst.pushSync === 'function') {
+          setTimeout(() => {
+            try {
+              syncInst.pushSync().catch(() => {});
+            } catch (e) {}
+          }, 100);
+        }
+      }
     }
 
     addTransaction(data) {

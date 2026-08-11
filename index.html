@@ -351,36 +351,30 @@
       <section id="view-settings" class="view-panel" data-view-content="settings" data-route="settings">
         <div class="card settings-card">
           <div class="card-header">
-            <h3 class="card-title">Cài Đặt Kết Nối Google Sheets</h3>
-            <p class="card-subtitle">Dán đường dẫn Web App Endpoint URL từ Google Apps Script</p>
+            <h3 class="card-title">🟢 Trạng Thái Đồng Bộ Google Sheets</h3>
+            <p class="card-subtitle">Ứng dụng đã tự động kết nối 2 chiều với Google Sheets cá nhân của bạn</p>
           </div>
-          <form id="settings-form" class="settings-form">
-            <div class="form-group">
-              <label for="gas-url-input" class="form-label">Google Apps Script Endpoint URL</label>
-              <input 
-                type="url" 
-                id="gas-url-input" 
-                class="form-control" 
-                placeholder="https://script.google.com/macros/s/.../exec"
-                autocomplete="off"
-              >
-              <span class="field-hint">Chỉ chấp nhận URL https://script.google.com/macros/s/.../exec</span>
+          <div class="auto-sync-status-box" style="padding: 1rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; margin: 1rem 0;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 1.75rem;">⚡</span>
+              <div>
+                <strong style="color: var(--text-primary); font-size: 1rem;">Tự Động Đồng Bộ 2 Chiều Được Bật</strong>
+                <p style="margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--text-secondary);">Mọi giao dịch thu chi mới sẽ được tự động ghi trực tiếp vào Google Sheets khi có kết nối mạng.</p>
+              </div>
             </div>
-            <div class="form-group checkbox-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="auto-sync-toggle" checked>
-                <span>Tự động đồng bộ khi có kết nối mạng</span>
-              </label>
-            </div>
-            <div class="form-actions">
-              <button type="submit" id="btn-save-settings" class="btn btn-primary">
-                💾 Lưu Cài Đặt
-              </button>
-              <button type="button" id="btn-test-connection" class="btn btn-secondary">
-                🔄 Kiểm Tra Kết Nối
-              </button>
-            </div>
+          </div>
+          <form id="settings-form" class="settings-form" style="display: none;">
+            <input type="hidden" id="gas-url-input" value="https://script.google.com/macros/s/AKfycbzI9y7gVMLLob2lNltvGyzH5_ZA-XEav5MC-037FI7JzuWS38iQ6dTzitphHBkhC5HiQQ/exec">
+            <input type="checkbox" id="auto-sync-toggle" checked style="display: none;">
           </form>
+          <div class="form-actions" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button type="button" id="btn-manual-sync" class="btn btn-primary" onclick="if(window.SyncEngine) window.SyncEngine.sync();">
+              🔄 Đồng Bộ Ngay (Push & Pull)
+            </button>
+            <button type="button" id="btn-test-connection" class="btn btn-secondary">
+              🧪 Kiểm Tra Kết Nối
+            </button>
+          </div>
         </div>
 
         <div class="card settings-card mt-4">
