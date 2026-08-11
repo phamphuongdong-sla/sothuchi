@@ -16,6 +16,24 @@
     return (prefix || 'tx') + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   }
 
+  function formatLocalYMD(d) {
+    if (!d) {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+    if (typeof d === 'string') {
+      const cleaned = d.trim();
+      if (cleaned.includes('T')) return cleaned.split('T')[0];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) return cleaned;
+      d = new Date(cleaned);
+    }
+    if (d instanceof Date && !isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }
+
   function normalizeTransaction(tx) {
     if (!tx || typeof tx !== 'object') return null;
     const now = new Date().toISOString();
@@ -31,7 +49,7 @@
 
     return {
       id: String(tx.id || generateId('tx')),
-      date: tx.date ? String(tx.date) : now.split('T')[0],
+      date: formatLocalYMD(tx.date),
       type,
       category,
       amount: isNaN(amount) ? 0 : amount,
@@ -241,12 +259,14 @@
   global.DB = dbInstance;
   global.db = dbInstance;
   global.formatVND = formatVND;
+  global.formatLocalYMD = formatLocalYMD;
 
   if (typeof globalThis !== 'undefined') {
     globalThis.DatabaseManager = DatabaseManager;
     globalThis.DB = dbInstance;
     globalThis.db = dbInstance;
     globalThis.formatVND = formatVND;
+    globalThis.formatLocalYMD = formatLocalYMD;
   }
 
   if (typeof module !== 'undefined' && module.exports) {

@@ -347,8 +347,10 @@ function numberToVietnameseWords(amount) {
    -------------------------------------------------------------------------- */
 const TransactionForm = {
   _todayString() {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return window.formatLocalYMD ? window.formatLocalYMD() : (() => {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    })();
   },
 
   getCurrentType() {
@@ -407,7 +409,7 @@ const TransactionForm = {
     const amountInput = document.getElementById('input-amount');
     if (amountInput) amountInput.value = '';
     const wordsBox = document.getElementById('amount-in-words');
-    if (wordsBox) { wordsBox.setAttribute('hidden', ''); wordsBox.innerHTML = ''; }
+    if (wordsBox) { wordsBox.setAttribute('hidden', ''); wordsBox.style.display = 'none'; wordsBox.innerHTML = ''; }
     const expenseRadio = document.getElementById('type-expense');
     if (expenseRadio) expenseRadio.checked = true;
     const dateInput = document.getElementById('input-date');
@@ -467,7 +469,8 @@ const TransactionForm = {
     const type = this.getCurrentType();
     const amount = parseRawAmount(document.getElementById('input-amount')?.value);
     const category = document.getElementById('input-category')?.value || '';
-    const date = document.getElementById('input-date')?.value || this._todayString();
+    const rawDate = document.getElementById('input-date')?.value;
+    const date = window.formatLocalYMD ? window.formatLocalYMD(rawDate) : (rawDate || this._todayString());
     const note = (document.getElementById('input-note')?.value || '').trim();
 
     if (!amount || amount <= 0) {
@@ -487,7 +490,10 @@ const TransactionForm = {
 
     const newTx = db.addTransaction({ type, amount, category, date, note });
     const fmtVND = window.formatVND ? window.formatVND(amount) : `${amount} ₫`;
-    Toast.show(`Đã thêm ${type === 'expense' ? 'chi tiêu' : 'thu nhập'} ${fmtVND}!`, 'success');
+    const dateParts = (date || '').split('-');
+    const fmtDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : date;
+
+    Toast.show(`Đã lưu ${type === 'expense' ? 'chi tiêu' : 'thu nhập'} ${fmtVND} (Ngày ${fmtDate})!`, 'success');
     this.resetForm();
 
     try {

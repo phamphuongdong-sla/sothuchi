@@ -389,9 +389,21 @@ function getOrCreateNamedSheet(name, headers) {
 }
 
 function formatDate(val) {
-  if (!val) return new Date().toISOString().split('T')[0];
-  if (val instanceof Date) return val.toISOString().split('T')[0];
-  return String(val).split('T')[0];
+  if (!val) {
+    var now = new Date();
+    return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+  }
+  if (val instanceof Date) {
+    var year = val.getFullYear();
+    var month = String(val.getMonth() + 1).padStart(2, '0');
+    var day = String(val.getDate()).padStart(2, '0');
+    return year + '-' + month + '-' + day;
+  }
+  var str = String(val).trim();
+  if (str.indexOf('T') !== -1) {
+    str = str.split('T')[0];
+  }
+  return str;
 }
 
 function responseJSON(obj) {

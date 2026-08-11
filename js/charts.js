@@ -70,16 +70,19 @@
       let start = '';
       let end = '';
 
+      const formatYMD = global.formatLocalYMD || (d => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      });
+
       if (this.currentDateRange === 'this_month') {
-        const firstDay = new Date(currentYear, currentMonth, 1);
-        const lastDay = new Date(currentYear, currentMonth + 1, 0);
-        start = firstDay.toISOString().split('T')[0];
-        end = lastDay.toISOString().split('T')[0];
+        start = formatYMD(new Date(currentYear, currentMonth, 1));
+        end = formatYMD(new Date(currentYear, currentMonth + 1, 0));
       } else if (this.currentDateRange === 'last_month') {
-        const firstDay = new Date(currentYear, currentMonth - 1, 1);
-        const lastDay = new Date(currentYear, currentMonth, 0);
-        start = firstDay.toISOString().split('T')[0];
-        end = lastDay.toISOString().split('T')[0];
+        start = formatYMD(new Date(currentYear, currentMonth - 1, 1));
+        end = formatYMD(new Date(currentYear, currentMonth, 0));
       } else if (this.currentDateRange === 'this_year') {
         start = `${currentYear}-01-01`;
         end = `${currentYear}-12-31`;

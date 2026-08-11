@@ -218,12 +218,19 @@
       const m = now.getMonth();
       let start = '', end = '';
 
+      const formatYMD = global.formatLocalYMD || (d => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      });
+
       if (key === 'this_month') {
-        start = new Date(y, m, 1).toISOString().split('T')[0];
-        end = new Date(y, m + 1, 0).toISOString().split('T')[0];
+        start = formatYMD(new Date(y, m, 1));
+        end = formatYMD(new Date(y, m + 1, 0));
       } else if (key === 'last_month') {
-        start = new Date(y, m - 1, 1).toISOString().split('T')[0];
-        end = new Date(y, m, 0).toISOString().split('T')[0];
+        start = formatYMD(new Date(y, m - 1, 1));
+        end = formatYMD(new Date(y, m, 0));
       } else if (key === 'this_year') {
         start = `${y}-01-01`;
         end = `${y}-12-31`;
@@ -631,7 +638,19 @@
       document.getElementById('btn-confirm-delete-tx')?.addEventListener('click', () => this.handleConfirmDelete());
 
       // Global events
-      window.addEventListener('transactionadded', () => { this.pagination.visibleCount = this.pagination.pageSize; this.render(); });
+      window.addEventListener('transactionadded', (e) => {
+        const newTx = e?.detail?.transaction;
+        if (newTx && newTx.date) {
+          const { startDate, endDate, preset } = this.currentFilters;
+          if (preset !== 'all' && ((startDate && newTx.date < startDate) || (endDate && newTx.date > endDate))) {
+            this.applyDatePreset('all');
+            const presetSelect = document.getElementById('filter-date-preset');
+            if (presetSelect) presetSelect.value = 'all';
+          }
+        }
+        this.pagination.visibleCount = this.pagination.pageSize;
+        this.render();
+      });
       window.addEventListener('transactionupdated', () => this.render());
       window.addEventListener('transactiondeleted', () => this.render());
       window.addEventListener('transactionschanged', () => this.render());
