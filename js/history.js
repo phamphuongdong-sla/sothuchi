@@ -716,6 +716,7 @@
         window.addEventListener('transactionadded', () => this.render());
         window.addEventListener('transactionupdated', () => this.render());
         window.addEventListener('transactiondeleted', () => this.render());
+        window.addEventListener('transactionschanged', () => this.render());
         window.addEventListener('categorieschanged', () => {
           this.populateCategories();
           this.render();

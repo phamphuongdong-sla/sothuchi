@@ -152,8 +152,8 @@ async function runTier2Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
     const dbPath = path.join(projectRoot, 'js/db.js');
     TestAssert.isTrue(fs.existsSync(dbPath), 'js/db.js file must exist');
     const localEnv = new TestEnvironment(projectRoot);
-    localEnv.localStorage.throwQuotaError = true;
     localEnv.loadSourceFiles();
+    localEnv.localStorage.throwQuotaError = true;
     TestAssert.isOk(localEnv.context.DB, 'DB module must be loaded');
     TestAssert.throws(() => {
       localEnv.context.DB.addTransaction({ amount: 50000, category: 'Ăn uống' });

@@ -13,6 +13,7 @@
       this.STORAGE_KEY = 'stc_settings';
       this.LEGACY_KEY = 'so_thu_chi_settings';
       this.isSyncing = false;
+      this.hasPendingSyncRequest = false;
       this.retryCount = 0;
       this.maxRetries = 5;
 
@@ -117,6 +118,11 @@
      * @returns {Promise<Object>} { success, syncedCount }
      */
     async pushSync() {
+      if (this.isSyncing) {
+        this.hasPendingSyncRequest = true;
+        return { success: false, reason: 'Sync already in progress' };
+      }
+
       const nav = global.navigator || (global.window && global.window.navigator);
       if (nav && nav.onLine === false) {
         this.updateStatusIndicator('offline');
@@ -155,82 +161,81 @@
         transactions: payloadTransactions
       };
 
-      // 1. Try GET syncBatch query parameter (survives Google Apps Script 302 redirects with query params intact)
-      try {
-        const encodedPayload = encodeURIComponent(JSON.stringify(payloadObj));
-        const syncGetUrl = settings.gasUrl + (settings.gasUrl.includes('?') ? '&' : '?') + 'action=syncBatch&payload=' + encodedPayload;
-        const resGet = await fetchFn(syncGetUrl, { method: 'GET' });
+      const payloadStr = JSON.stringify(payloadObj);
+      let successResult = null;
 
-        if (resGet.ok) {
-          const jsonGet = await resGet.json();
-          if (jsonGet.status === 'success') {
-            const syncedIds = jsonGet.synced_ids || payloadTransactions.map(t => t.id);
+      // 1. Try GET syncBatch query parameter if payload is small (< 1000 chars)
+      if (payloadStr.length < 1000) {
+        try {
+          const encodedPayload = encodeURIComponent(payloadStr);
+          const syncGetUrl = settings.gasUrl + (settings.gasUrl.includes('?') ? '&' : '?') + 'action=syncBatch&payload=' + encodedPayload;
+          const resGet = await fetchFn(syncGetUrl, { method: 'GET' });
 
-            const updatedTxs = db.getTransactions({ includeDeleted: true }).map(t => {
-              if (syncedIds.includes(t.id)) {
-                if (t.sync_status === 'pending_delete') {
-                  return null;
-                }
-                return { ...t, sync_status: 'synced' };
-              }
-              return t;
-            }).filter(Boolean);
-
-            db.saveTransactions(updatedTxs);
-            this.isSyncing = false;
-            this.retryCount = 0;
-            this.updateStatusIndicator('success');
-            return { success: true, syncedCount: syncedIds.length };
-          }
-        }
-      } catch (getErr) {
-        console.warn('[SyncEngine] GET syncBatch failed, trying POST fallback:', getErr);
-      }
-
-      // 2. Fallback to POST method
-      try {
-        const res = await fetchFn(settings.gasUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payloadObj)
-        });
-
-        if (!res.ok) {
-          throw new Error(`Push Sync HTTP ${res.status}`);
-        }
-
-        const json = await res.json();
-        if (json.status === 'success') {
-          const syncedIds = json.synced_ids || payloadTransactions.map(t => t.id);
-
-          // Update local DB items to synced
-          const updatedTxs = db.getTransactions({ includeDeleted: true }).map(t => {
-            if (syncedIds.includes(t.id)) {
-              if (t.sync_status === 'pending_delete') {
-                return null; // Permanently remove soft-deleted item after remote sync ACK
-              }
-              return { ...t, sync_status: 'synced' };
+          if (resGet.ok) {
+            const jsonGet = await resGet.json();
+            if (jsonGet.status === 'success') {
+              successResult = jsonGet;
             }
-            return t;
-          }).filter(Boolean);
-
-          db.saveTransactions(updatedTxs);
-          this.isSyncing = false;
-          this.retryCount = 0;
-          this.updateStatusIndicator('success');
-          return { success: true, syncedCount: syncedIds.length };
-        } else {
-          throw new Error(json.message || 'Push sync server error');
+          }
+        } catch (getErr) {
+          console.warn('[SyncEngine] GET syncBatch failed, trying POST fallback:', getErr);
         }
-      } catch (err) {
-        this.isSyncing = false;
-        this.updateStatusIndicator('error');
-        const isAuthError = err.message && (err.message.includes('SyntaxError') || err.message.includes('<') || err.message.includes('Unexpected token'));
-        const friendlyMsg = isAuthError 
-          ? 'Google Sheet chưa được Cấp Quyền ghi dữ liệu. Vui lòng mở Apps Script > chọn hàm doGet > bấm ▶ Chạy (Run) để Cấp Quyền!' 
-          : err.message;
-        return { success: false, error: friendlyMsg };
       }
+
+      // 2. Direct POST method if payload > 1000 chars or GET failed
+      if (!successResult) {
+        try {
+          const res = await fetchFn(settings.gasUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: payloadStr
+          });
+
+          if (!res.ok) {
+            throw new Error(`Push Sync HTTP ${res.status}`);
+          }
+
+          const json = await res.json();
+          if (json.status === 'success') {
+            successResult = json;
+          } else {
+            throw new Error(json.message || 'Push sync server error');
+          }
+        } catch (err) {
+          this.isSyncing = false;
+          this.updateStatusIndicator('error');
+          const isAuthError = err.message && (err.message.includes('SyntaxError') || err.message.includes('<') || err.message.includes('Unexpected token'));
+          const friendlyMsg = isAuthError 
+            ? 'Google Sheet chưa được Cấp Quyền ghi dữ liệu. Vui lòng mở Apps Script > chọn hàm doGet > bấm ▶ Chạy (Run) để Cấp Quyền!' 
+            : err.message;
+          return { success: false, error: friendlyMsg };
+        }
+      }
+
+      const syncedIds = successResult.synced_ids || payloadTransactions.map(t => t.id);
+
+      const updatedTxs = db.getTransactions({ includeDeleted: true }).map(t => {
+        if (syncedIds.includes(t.id)) {
+          if (t.sync_status === 'pending_delete') {
+            return null;
+          }
+          return { ...t, sync_status: 'synced' };
+        }
+        return t;
+      }).filter(Boolean);
+
+      db.saveTransactions(updatedTxs, { skipAutoPush: true });
+      this.isSyncing = false;
+      this.retryCount = 0;
+      this.updateStatusIndicator('success');
+
+      // Drain queued sync request if user modified transactions during flight
+      if (this.hasPendingSyncRequest) {
+        this.hasPendingSyncRequest = false;
+        setTimeout(() => this.pushSync().catch(() => {}), 50);
+      }
+
+      return { success: true, syncedCount: syncedIds.length };
     }
 
     /**
@@ -306,7 +311,16 @@
           });
 
           const mergedArray = Array.from(localMap.values());
-          db.saveTransactions(mergedArray);
+          db.saveTransactions(mergedArray, { skipAutoPush: true });
+
+          // Dispatch reactive DOM events to immediately notify History, Dashboard & Charts UI components
+          if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+            try {
+              window.dispatchEvent(new CustomEvent('transactionschanged', { detail: { transactions: mergedArray } }));
+              window.dispatchEvent(new CustomEvent('transactionupdated'));
+              window.dispatchEvent(new CustomEvent('transactiondeleted'));
+            } catch (e) {}
+          }
 
           // Update Categories if provided from sheet "DanhMuc"
           if (Array.isArray(json.categories) && json.categories.length > 0) {
@@ -393,20 +407,51 @@
     initListeners() {
       if (typeof window === 'undefined') return;
 
-      window.addEventListener('online', () => {
-        this.updateStatusIndicator('idle');
-        const settings = this.getSettings();
-        if (settings.autoSync && settings.gasUrl) {
-          this.syncAll();
+      try {
+        const handleAutoSyncTrigger = () => {
+          const settings = this.getSettings();
+          const nav = global.navigator || (typeof window !== 'undefined' ? window.navigator : null);
+          if (settings.autoSync && settings.gasUrl && !this.isSyncing && nav && nav.onLine !== false) {
+            this.syncAll().catch(() => {});
+          }
+        };
+
+        if (typeof window.addEventListener === 'function') {
+          window.addEventListener('online', () => {
+            this.updateStatusIndicator('idle');
+            handleAutoSyncTrigger();
+          });
+
+          window.addEventListener('offline', () => {
+            this.updateStatusIndicator('offline');
+          });
+
+          // Auto-sync on window focus (user switches back to tab after editing/deleting on Sheets)
+          window.addEventListener('focus', handleAutoSyncTrigger);
         }
-      });
 
-      window.addEventListener('offline', () => {
-        this.updateStatusIndicator('offline');
-      });
+        // Auto-sync on tab visibility change
+        if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+          document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+              handleAutoSyncTrigger();
+            }
+          });
+        }
 
-      // Attach click handlers for manual sync and test buttons in Settings
-      document.addEventListener('click', async (e) => {
+        // Background periodic auto-sync polling every 20 seconds (if in browser)
+        if (typeof window !== 'undefined' && typeof window.document !== 'undefined' && window.location && window.location.protocol && window.location.protocol.startsWith('http')) {
+          try {
+            const syncInterval = setInterval(handleAutoSyncTrigger, 20000);
+            if (syncInterval && typeof syncInterval.unref === 'function') {
+              syncInterval.unref();
+            }
+          } catch (e) {}
+        }
+
+        // Attach click handlers for manual sync and test buttons in Settings
+        if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+          document.addEventListener('click', async (e) => {
         const btnSync = e.target.closest('#btn-manual-sync');
         if (btnSync) {
           e.preventDefault();
@@ -457,6 +502,8 @@
         }
       });
     }
+  } catch (err) {}
+}
   }
 
   const engine = new SyncEngine();

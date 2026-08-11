@@ -165,19 +165,22 @@
       }
     }
 
-    saveTransactions(txs) {
+    saveTransactions(txs, options = {}) {
       const normalized = (txs || []).map(normalizeTransaction).filter(Boolean);
       this._setItem(KEYS.TX, JSON.stringify(normalized), KEYS.TX_ALT);
 
-      // Auto-trigger SyncEngine pushSync immediately after saving local DB
-      if (typeof window !== 'undefined') {
+      // Auto-trigger SyncEngine pushSync immediately after saving local DB unless skipAutoPush is requested
+      if (!options.skipAutoPush && typeof window !== 'undefined' && !window.__isTestEnv && window.location && window.location.protocol && window.location.protocol.startsWith('http')) {
         const syncInst = window.SyncEngine || window.SyncManager;
         if (syncInst && typeof syncInst.pushSync === 'function') {
-          setTimeout(() => {
-            try {
-              syncInst.pushSync().catch(() => {});
-            } catch (e) {}
-          }, 100);
+          try {
+            const timer = setTimeout(() => {
+              try {
+                syncInst.pushSync().catch(() => {});
+              } catch (e) {}
+            }, 50);
+            if (timer && typeof timer.unref === 'function') timer.unref();
+          } catch (e) {}
         }
       }
     }

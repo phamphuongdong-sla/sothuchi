@@ -350,53 +350,57 @@ const Router = {
  */
 const App = {
   init() {
-    console.log('[App] Initializing Sổ Thu Chi PWA App Shell...');
+    try {
+      console.log('[App] Initializing Sổ Thu Chi PWA App Shell...');
 
-    // 1. Initialize Theme Engine (applies data-theme to documentElement)
-    ThemeEngine.init();
+      // 1. Initialize Theme Engine (applies data-theme to documentElement)
+      ThemeEngine.init();
 
-    // 2. Register Router lifecycle hooks for M3
-    Router.on('budget', () => {
+      // 2. Register Router lifecycle hooks for M3
+      Router.on('budget', () => {
+        const historyUI = typeof window !== 'undefined' ? (window.HistoryUI || window.HistoryManager) : null;
+        if (historyUI && typeof historyUI.init === 'function') {
+          historyUI.init();
+        } else if (historyUI && typeof historyUI.render === 'function') {
+          historyUI.render();
+        }
+      });
+
+      Router.on('reports', () => {
+        const chartsUI = typeof window !== 'undefined' ? (window.ChartsUI || window.Charts || window.ChartManager) : null;
+        if (chartsUI && typeof chartsUI.init === 'function') {
+          chartsUI.init();
+        } else if (chartsUI && typeof chartsUI.renderCharts === 'function') {
+          chartsUI.renderCharts();
+        }
+      });
+
+      // Initialize SPA Router (activates view panel based on hash)
+      Router.init();
+
+      // 3. Register Service Worker
+      registerServiceWorker();
+
+      // 4. Initialize Transaction Form Component
+      TransactionForm.init();
+
+      // 5. Initialize History, Charts & Category Tree event listeners
       const historyUI = typeof window !== 'undefined' ? (window.HistoryUI || window.HistoryManager) : null;
-      if (historyUI && typeof historyUI.init === 'function') {
-        historyUI.init();
-      } else if (historyUI && typeof historyUI.render === 'function') {
-        historyUI.render();
+      if (historyUI && typeof historyUI.initEventListeners === 'function') {
+        historyUI.initEventListeners();
       }
-    });
-
-    Router.on('reports', () => {
       const chartsUI = typeof window !== 'undefined' ? (window.ChartsUI || window.Charts || window.ChartManager) : null;
-      if (chartsUI && typeof chartsUI.init === 'function') {
-        chartsUI.init();
-      } else if (chartsUI && typeof chartsUI.renderCharts === 'function') {
-        chartsUI.renderCharts();
+      if (chartsUI && typeof chartsUI.initEventListeners === 'function') {
+        chartsUI.initEventListeners();
       }
-    });
+      if (typeof CategoryTreeManager !== 'undefined' && typeof CategoryTreeManager.initEventListeners === 'function') {
+        CategoryTreeManager.initEventListeners();
+      }
 
-    // Initialize SPA Router (activates view panel based on hash)
-    Router.init();
-
-    // 3. Register Service Worker
-    registerServiceWorker();
-
-    // 4. Initialize Transaction Form Component
-    TransactionForm.init();
-
-    // 5. Initialize History, Charts & Category Tree event listeners
-    const historyUI = typeof window !== 'undefined' ? (window.HistoryUI || window.HistoryManager) : null;
-    if (historyUI && typeof historyUI.initEventListeners === 'function') {
-      historyUI.initEventListeners();
+      console.log('[App] App Shell initialization complete.');
+    } catch (err) {
+      console.warn('[App] Non-fatal App Shell initialization warning:', err);
     }
-    const chartsUI = typeof window !== 'undefined' ? (window.ChartsUI || window.Charts || window.ChartManager) : null;
-    if (chartsUI && typeof chartsUI.initEventListeners === 'function') {
-      chartsUI.initEventListeners();
-    }
-    if (typeof CategoryTreeManager !== 'undefined' && typeof CategoryTreeManager.initEventListeners === 'function') {
-      CategoryTreeManager.initEventListeners();
-    }
-
-    console.log('[App] App Shell initialization complete.');
   }
 };
 
@@ -675,13 +679,19 @@ const TransactionForm = {
       resetBtn.addEventListener('click', () => this.resetForm());
     }
 
-    // Listen for category and auth updates
+    // Listen for category, auth, and transaction data sync updates
     if (typeof window !== 'undefined') {
       window.addEventListener('categorieschanged', () => {
         this.populateCategories(this.getCurrentType());
       });
       window.addEventListener('authchanged', () => {
         this.updateDashboardStats();
+      });
+
+      ['transactionschanged', 'transactionadded', 'transactionupdated', 'transactiondeleted'].forEach(evt => {
+        window.addEventListener(evt, () => {
+          this.updateDashboardStats();
+        });
       });
     }
 
@@ -712,9 +722,11 @@ const TransactionForm = {
     const elIncome = document.getElementById('dash-income-amount');
     const elExpense = document.getElementById('dash-expense-amount');
 
-    if (elBalance) elBalance.textContent = formatCurrencyVND(balance);
-    if (elIncome) elIncome.textContent = formatCurrencyVND(totalIncome);
-    if (elExpense) elExpense.textContent = formatCurrencyVND(totalExpense);
+    const fmtVND = (db && typeof db.formatVND === 'function') ? (n => db.formatVND(n)) : (typeof formatVND === 'function' ? formatVND : (n => Number(n).toLocaleString('vi-VN') + ' ₫'));
+
+    if (elBalance) elBalance.textContent = fmtVND(balance);
+    if (elIncome) elIncome.textContent = fmtVND(totalIncome);
+    if (elExpense) elExpense.textContent = fmtVND(totalExpense);
 
     const user = (typeof window !== 'undefined' && window.Auth) ? window.Auth.getUser() : null;
     const elUser = document.getElementById('hero-user-name');

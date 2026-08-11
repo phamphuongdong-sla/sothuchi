@@ -11,6 +11,7 @@ const { runTier4Tests } = require('./tier4_scenarios.test');
 const { runM3VerificationTests } = require('./m3_verification.test');
 const { run3TierCategoryTests } = require('./3tier_category_hierarchy.test');
 const { runDeletionSyncTests } = require('./deletion_sync.test');
+const { runSyncPerformanceTests } = require('./sync_performance.test');
 
 async function main() {
   const projectRoot = path.resolve(__dirname, '..');
@@ -167,6 +168,26 @@ async function main() {
   });
   console.log(`-> Deletion Sync Summary: ${delSyncPassed}/${delSyncResults.length} passed.\n`);
 
+  // --------------------------------------------------------------------------
+  // SYNC PERFORMANCE & BENCHMARK: Verification Suite (3 Tests)
+  // --------------------------------------------------------------------------
+  console.log('>>> [SYNC PERFORMANCE] Sync Performance & Benchmark Verification...');
+  const syncPerfResults = await runSyncPerformanceTests(projectRoot);
+  let syncPerfPassed = 0;
+  syncPerfResults.forEach(r => {
+    totalTests++;
+    if (r.passed) {
+      syncPerfPassed++;
+      totalPassed++;
+      console.log(`  [PASS] ${r.id}: ${r.title} (${r.duration}ms)`);
+    } else {
+      totalFailed++;
+      console.log(`  [FAIL] ${r.id}: ${r.title} (${r.duration}ms)`);
+      console.log(`         Error: ${r.error ? r.error.message : 'Unknown error'}`);
+    }
+  });
+  console.log(`-> Sync Performance Summary: ${syncPerfPassed}/${syncPerfResults.length} passed.\n`);
+
   const durationMs = Date.now() - startTime;
   console.log('================================================================');
   console.log(' FINAL TEST SUITE RESULTS SUMMARY');
@@ -178,6 +199,7 @@ async function main() {
   console.log(`Milestone M3 Verification:               ${m3Passed} / ${m3Results.length} passed`);
   console.log(`3-Tier Category Hierarchy:               ${cat3tPassed} / ${cat3tResults.length} passed`);
   console.log(`Bidirectional Deletion Sync:             ${delSyncPassed} / ${delSyncResults.length} passed`);
+  console.log(`Sync Performance & Benchmark:            ${syncPerfPassed} / ${syncPerfResults.length} passed`);
   console.log('----------------------------------------------------------------');
   console.log(`TOTAL TEST CASES:                        ${totalTests}`);
   console.log(`TOTAL PASSED:                            ${totalPassed}`);

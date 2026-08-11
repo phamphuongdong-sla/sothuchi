@@ -641,6 +641,7 @@ class TestEnvironment {
     };
 
     // Pre-parse index.html into document if present
+    this.window.__isTestEnv = true;
     const htmlPath = path.join(this.projectRoot, 'index.html');
     if (fs.existsSync(htmlPath)) {
       this.document.parseHTML(fs.readFileSync(htmlPath, 'utf8'));

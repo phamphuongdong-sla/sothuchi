@@ -124,36 +124,61 @@ function doGet(e) {
 
 /**
  * Shared syncBatch processor used for Sheet "GiaoDich"
+ * High-performance implementation: Reads sheet once into memory, maps row IDs O(1),
+ * applies batch updates in memory, and flushes back with a single batch setValues operation.
  */
 function processSyncBatch(txs) {
   const sheet = getOrCreateNamedSheet(SHEET_TX, HEADERS_TX);
   const syncedIds = [];
+  if (!txs || !Array.isArray(txs) || txs.length === 0) {
+    return responseJSON({ status: 'success', synced_ids: [] });
+  }
 
-  (txs || []).forEach(function(tx) {
+  const dataRange = sheet.getDataRange ? sheet.getDataRange() : null;
+  const rows = dataRange && typeof dataRange.getValues === 'function' ? dataRange.getValues() : [];
+
+  const headerRow = (rows && rows.length > 0 && rows[0].length >= 8) ? rows[0] : HEADERS_TX;
+  const existingRowsMap = new Map();
+  if (rows && rows.length > 1) {
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i] && rows[i][0]) {
+        existingRowsMap.set(String(rows[i][0]), rows[i]);
+      }
+    }
+  }
+
+  const nowIso = new Date().toISOString();
+
+  txs.forEach(function(tx) {
     if (!tx || !tx.id) return;
-    const rowIdx = findRowIndexById(sheet, tx.id);
-    const nowIso = new Date().toISOString();
-    const dateVal = tx.date || nowIso.split('T')[0];
-    const createdAt = tx.created_at || tx.createdAt || nowIso;
-    const updatedAt = tx.updated_at || tx.updatedAt || nowIso;
+    const txId = String(tx.id);
+    syncedIds.push(tx.id);
 
     if (tx.sync_status === 'pending_delete') {
-      if (rowIdx !== -1) sheet.deleteRow(rowIdx);
-      syncedIds.push(tx.id);
-    } else if (rowIdx !== -1) {
-      sheet.getRange(rowIdx, 1, 1, 8).setValues([[
-        tx.id, dateVal, tx.type || 'expense', tx.category || 'Khác',
-        Number(tx.amount) || 0, tx.note || '', createdAt, updatedAt
-      ]]);
-      syncedIds.push(tx.id);
+      existingRowsMap.delete(txId);
     } else {
-      sheet.appendRow([
+      const dateVal = tx.date || nowIso.split('T')[0];
+      const createdAt = tx.created_at || tx.createdAt || nowIso;
+      const updatedAt = tx.updated_at || tx.updatedAt || nowIso;
+      const rowVal = [
         tx.id, dateVal, tx.type || 'expense', tx.category || 'Khác',
         Number(tx.amount) || 0, tx.note || '', createdAt, updatedAt
-      ]);
-      syncedIds.push(tx.id);
+      ];
+      existingRowsMap.set(txId, rowVal);
     }
   });
+
+  const workingRows = [headerRow];
+  existingRowsMap.forEach(function(rowVal) {
+    workingRows.push(rowVal);
+  });
+
+  if (typeof sheet.clearContents === 'function') {
+    sheet.clearContents();
+  }
+  if (typeof sheet.getRange === 'function' && workingRows.length > 0) {
+    sheet.getRange(1, 1, workingRows.length, 8).setValues(workingRows);
+  }
 
   return responseJSON({
     status: 'success',
@@ -253,8 +278,11 @@ function formatDate(val) {
 }
 
 function responseJSON(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+  if (typeof ContentService !== 'undefined' && ContentService.createTextOutput) {
+    return ContentService.createTextOutput(JSON.stringify(obj))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  return obj;
 }
 
 function MockSheet() {
