@@ -77,7 +77,7 @@ async function runTier4Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
     // Step 4: Inspect Category Breakdown Report metrics
     const chartData = env.context.ChartManager.prepareCategoryChartData(env.context.DB.getTransactions());
     TestAssert.equal(chartData.total, 1920000);
-    const petIdx = chartData.labels.indexOf('Thú cưng');
+    const petIdx = chartData.labels.indexOf('Thú cưng riêng');
     TestAssert.isTrue(petIdx !== -1);
     TestAssert.equal(chartData.percentages[petIdx], 21.9);
   }));
