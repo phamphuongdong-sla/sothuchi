@@ -1,13 +1,56 @@
 /**
  * js/history.js - Transaction History & Filter/Search Manager
  * Handles transaction history listing, date/month grouping, keyword search (300ms debounce),
- * category filtering, date range filtering presets, pagination/infinite scroll,
- * and inline edit/delete transaction modals.
+ * category filtering, date range filtering presets, pagination, and edit/delete modals.
  */
 
-(function(global) {
+(function (global) {
   'use strict';
 
+  /* ------------------------------------------------------------------
+     Helpers
+     ------------------------------------------------------------------ */
+  function getDB() {
+    return global.DB || (global.window && global.window.DB);
+  }
+
+  function getCatMgr() {
+    return global.CategoryManager || global.Categories ||
+      (global.window && (global.window.CategoryManager || global.window.Categories));
+  }
+
+  function formatVND(n) {
+    const db = getDB();
+    if (db && db.formatVND) return db.formatVND(n);
+    if (global.formatVND) return global.formatVND(n);
+    return Number(n).toLocaleString('vi-VN') + ' ₫';
+  }
+
+  /** Get icon for a category name from CategoryManager */
+  function getCatIcon(catName, type) {
+    const mgr = getCatMgr();
+    if (mgr && typeof mgr.getCategories === 'function') {
+      const all = mgr.getCategories(true);
+      const found = all.find(c => c.name === catName);
+      if (found && found.icon) return found.icon;
+    }
+    return type === 'income' ? '💰' : '💸';
+  }
+
+  /** Escape HTML for XSS prevention */
+  function escapeHTML(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  /* ------------------------------------------------------------------
+     HistoryManager Class
+     ------------------------------------------------------------------ */
   class HistoryManager {
     constructor() {
       this.currentFilters = {
@@ -19,10 +62,8 @@
         preset: 'this_month'
       };
       this.pagination = {
-        currentPage: 1,
         pageSize: 20,
-        visibleCount: 20,
-        hasMore: false
+        visibleCount: 20
       };
       this.activeEditId = null;
       this.activeDeleteId = null;
@@ -30,209 +71,174 @@
       this.isInitialized = false;
     }
 
-    /**
-     * Escape HTML special characters for XSS prevention
-     * @param {string} str 
-     * @returns {string} Safe string
-     */
-    escapeHTML(str) {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
+    /* ----------------------------------------------------------------
+       Filter Logic
+       ---------------------------------------------------------------- */
+    filterTransactions(overrides = {}) {
+      const db = getDB();
+      let txs = db && typeof db.getTransactions === 'function'
+        ? db.getTransactions()
+        : [];
 
-    /**
-     * Filter transactions based on filter parameters
-     * @param {Object} filters - { query, category, type, startDate, endDate, transactions }
-     * @returns {Array} Filtered list of transactions
-     */
-    filterTransactions(filters = {}) {
-      const db = global.DB || (global.window && global.window.DB) || (typeof window !== 'undefined' && window.DB);
-      let txs = filters.transactions || (db && typeof db.getTransactions === 'function' ? db.getTransactions() : []);
-
-      // Exclude soft-deleted records from active history view
+      // Exclude soft-deleted
       txs = txs.filter(t => t.sync_status !== 'pending_delete');
 
-      const query = (filters.query !== undefined ? filters.query : (this.currentFilters.query || '')).trim().toLowerCase();
-      const category = filters.category !== undefined ? filters.category : (this.currentFilters.category || 'all');
-      const type = filters.type !== undefined ? filters.type : (this.currentFilters.type || 'all');
-      const startDate = filters.startDate !== undefined ? filters.startDate : (this.currentFilters.startDate || '');
-      const endDate = filters.endDate !== undefined ? filters.endDate : (this.currentFilters.endDate || '');
+      const f = { ...this.currentFilters, ...overrides };
+      const query = (f.query || '').trim().toLowerCase();
+      const { category, type, startDate, endDate } = f;
 
-      // Inverted Date Range check: if startDate > endDate, return empty array
-      if (startDate && endDate && startDate > endDate) {
-        return [];
-      }
+      // Inverted date range → empty
+      if (startDate && endDate && startDate > endDate) return [];
 
       return txs.filter(tx => {
-        // Date range filter
         if (startDate && tx.date < startDate) return false;
         if (endDate && tx.date > endDate) return false;
-
-        // Type filter
         if (type && type !== 'all' && tx.type !== type) return false;
 
-        // Category filter (matches subcategory name or main group name)
+        // Category filter: match subcategory name or group name
         if (category && category !== 'all') {
+          const mgr = getCatMgr();
           const matchesCat = tx.category === category;
-          const catObj = global.Categories && typeof global.Categories.getAll === 'function'
-            ? global.Categories.getAll().find(c => c.name === tx.category)
-            : null;
-          const matchesGroup = catObj && (catObj.group === category || catObj.groupId === category);
+          let matchesGroup = false;
+          if (mgr && typeof mgr.getCategories === 'function') {
+            const catObj = mgr.getCategories(true).find(c => c.name === tx.category);
+            matchesGroup = !!(catObj && (catObj.group === category || catObj.groupId === category));
+          }
           if (!matchesCat && !matchesGroup) return false;
         }
 
-        // Keyword Search filter (matches note, category, group, amount, or date)
+        // Keyword search: note, category, group, amount (raw & formatted), date
         if (query) {
           const noteText = (tx.note || '').toLowerCase();
-          const categoryText = (tx.category || '').toLowerCase();
-          const catObj = global.Categories && typeof global.Categories.getAll === 'function'
-            ? global.Categories.getAll().find(c => c.name === tx.category)
-            : null;
-          const groupText = catObj ? (catObj.group || '').toLowerCase() : '';
-          const amountText = String(tx.amount || '');
-          const dateText = (tx.date || '').toLowerCase();
-          const matchesQuery = noteText.includes(query) || categoryText.includes(query) || groupText.includes(query) || amountText.includes(query) || dateText.includes(query);
-          if (!matchesQuery) return false;
+          const catText = (tx.category || '').toLowerCase();
+          const amountRaw = String(tx.amount || '');
+          // also match formatted VND like "50.000"
+          const amountFmt = formatVND(tx.amount).replace(/[^\d.]/g, '').toLowerCase();
+          const dateText = (tx.date || '');
+
+          let groupText = '';
+          const mgr = getCatMgr();
+          if (mgr && typeof mgr.getCategories === 'function') {
+            const catObj = mgr.getCategories(true).find(c => c.name === tx.category);
+            groupText = catObj ? (catObj.group || '').toLowerCase() : '';
+          }
+
+          const matched =
+            noteText.includes(query) ||
+            catText.includes(query) ||
+            groupText.includes(query) ||
+            amountRaw.includes(query.replace(/\./g, '')) ||
+            amountFmt.includes(query) ||
+            dateText.includes(query);
+
+          if (!matched) return false;
         }
 
         return true;
       });
     }
 
-    /**
-     * Group transactions by date string YYYY-MM-DD
-     * @param {Array} transactions 
-     * @returns {Array} Array of groups: [{ date, transactions, totalIncome, totalExpense, netTotal }]
-     */
-    groupTransactionsByDate(transactions = []) {
-      const groupMap = {};
-
+    /* ----------------------------------------------------------------
+       Group by date
+       ---------------------------------------------------------------- */
+    groupByDate(transactions) {
+      const map = {};
       transactions.forEach(tx => {
-        const dateKey = tx.date || 'Khác';
-        if (!groupMap[dateKey]) {
-          groupMap[dateKey] = {
-            date: dateKey,
-            transactions: [],
-            totalIncome: 0,
-            totalExpense: 0,
-            netTotal: 0
-          };
+        const key = tx.date || 'Khác';
+        if (!map[key]) {
+          map[key] = { date: key, transactions: [], totalIncome: 0, totalExpense: 0 };
         }
-
-        groupMap[dateKey].transactions.push(tx);
-        const amount = Number(tx.amount) || 0;
-        if (tx.type === 'income') {
-          groupMap[dateKey].totalIncome += amount;
-        } else {
-          groupMap[dateKey].totalExpense += amount;
-        }
-        groupMap[dateKey].netTotal = groupMap[dateKey].totalIncome - groupMap[dateKey].totalExpense;
+        map[key].transactions.push(tx);
+        const amt = Number(tx.amount) || 0;
+        if (tx.type === 'income') map[key].totalIncome += amt;
+        else map[key].totalExpense += amt;
       });
-
-      // Sort dates descending
-      const sortedDates = Object.keys(groupMap).sort((a, b) => b.localeCompare(a));
-      return sortedDates.map(dateKey => groupMap[dateKey]);
+      return Object.keys(map)
+        .sort((a, b) => b.localeCompare(a))
+        .map(k => map[k]);
     }
 
-    /**
-     * Populate Category Dropdown Filter
-     */
+    /* ----------------------------------------------------------------
+       Populate category filter dropdown
+       ---------------------------------------------------------------- */
     populateCategories() {
-      if (typeof document === 'undefined') return;
       const selectEl = document.getElementById('filter-category');
       if (!selectEl) return;
 
-      const db = global.DB || (global.window && global.window.DB);
-      let categories = [];
-      if (db && typeof db.getCategories === 'function') {
-        categories = db.getCategories(true);
-      } else if (global.Categories && typeof global.Categories.getCategories === 'function') {
-        categories = global.Categories.getCategories(true);
-      }
-
-      const currentVal = this.currentFilters.category || 'all';
+      const savedVal = this.currentFilters.category || 'all';
       selectEl.innerHTML = '<option value="all">Tất cả hạng mục</option>';
 
-      const groupsMap = new Map();
-      categories.forEach(cat => {
-        const gName = cat.group || 'Khác';
-        if (!groupsMap.has(gName)) {
-          groupsMap.set(gName, []);
+      const mgr = getCatMgr();
+      let categories = [];
+      if (mgr && typeof mgr.getCategories === 'function') {
+        categories = mgr.getCategories(true);
+      } else {
+        const db = getDB();
+        if (db && typeof db.getCategories === 'function') {
+          categories = db.getCategories(true);
         }
-        groupsMap.get(gName).push(cat);
+      }
+
+      // Group by group name
+      const groups = new Map();
+      categories.forEach(cat => {
+        const g = cat.group || 'Khác';
+        if (!groups.has(g)) groups.set(g, []);
+        groups.get(g).push(cat);
       });
 
-      groupsMap.forEach((catList, gName) => {
-        const optgroup = document.createElement('optgroup');
-        optgroup.label = gName;
-        catList.forEach(cat => {
+      groups.forEach((list, gName) => {
+        const og = document.createElement('optgroup');
+        og.label = gName;
+        list.forEach(cat => {
           const opt = document.createElement('option');
           opt.value = cat.name;
-          opt.textContent = `${cat.icon ? cat.icon + ' ' : ''}${cat.name}${cat.isHidden ? ' (Đã ẩn)' : ''}`;
-          optgroup.appendChild(opt);
+          opt.textContent = `${cat.icon ? cat.icon + ' ' : ''}${cat.name}${cat.isHidden || cat.is_hidden ? ' (Đã ẩn)' : ''}`;
+          og.appendChild(opt);
         });
-        selectEl.appendChild(optgroup);
+        selectEl.appendChild(og);
       });
 
-      selectEl.value = currentVal;
+      // Restore selected value
+      selectEl.value = savedVal;
     }
 
-    /**
-     * Apply Preset Date Range
-     * @param {string} presetKey - 'this_month' | 'last_month' | 'this_year' | 'all' | 'custom'
-     */
-    applyDatePreset(presetKey) {
-      this.currentFilters.preset = presetKey;
+    /* ----------------------------------------------------------------
+       Date preset
+       ---------------------------------------------------------------- */
+    applyDatePreset(key) {
+      this.currentFilters.preset = key;
       const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth();
+      const y = now.getFullYear();
+      const m = now.getMonth();
+      let start = '', end = '';
 
-      let startDate = '';
-      let endDate = '';
-
-      if (presetKey === 'this_month') {
-        const firstDay = new Date(currentYear, currentMonth, 1);
-        const lastDay = new Date(currentYear, currentMonth + 1, 0);
-        startDate = firstDay.toISOString().split('T')[0];
-        endDate = lastDay.toISOString().split('T')[0];
-      } else if (presetKey === 'last_month') {
-        const firstDay = new Date(currentYear, currentMonth - 1, 1);
-        const lastDay = new Date(currentYear, currentMonth, 0);
-        startDate = firstDay.toISOString().split('T')[0];
-        endDate = lastDay.toISOString().split('T')[0];
-      } else if (presetKey === 'this_year') {
-        startDate = `${currentYear}-01-01`;
-        endDate = `${currentYear}-12-31`;
-      } else if (presetKey === 'all') {
-        startDate = '';
-        endDate = '';
+      if (key === 'this_month') {
+        start = new Date(y, m, 1).toISOString().split('T')[0];
+        end = new Date(y, m + 1, 0).toISOString().split('T')[0];
+      } else if (key === 'last_month') {
+        start = new Date(y, m - 1, 1).toISOString().split('T')[0];
+        end = new Date(y, m, 0).toISOString().split('T')[0];
+      } else if (key === 'this_year') {
+        start = `${y}-01-01`;
+        end = `${y}-12-31`;
       }
+      // 'all' and 'custom' leave start/end empty
 
-      if (presetKey !== 'custom') {
-        this.currentFilters.startDate = startDate;
-        this.currentFilters.endDate = endDate;
-
-        if (typeof document !== 'undefined') {
-          const startEl = document.getElementById('filter-start-date');
-          const endEl = document.getElementById('filter-end-date');
-          if (startEl) startEl.value = startDate;
-          if (endEl) endEl.value = endDate;
-        }
+      if (key !== 'custom') {
+        this.currentFilters.startDate = start;
+        this.currentFilters.endDate = end;
+        const startEl = document.getElementById('filter-start-date');
+        const endEl = document.getElementById('filter-end-date');
+        if (startEl) startEl.value = start;
+        if (endEl) endEl.value = end;
       }
     }
 
-    /**
-     * Render transaction history list in DOM with pagination batching
-     * @param {Array} transactions 
-     * @param {HTMLElement} container 
-     */
+    /* ----------------------------------------------------------------
+       Render history list
+       ---------------------------------------------------------------- */
     renderHistoryList(transactions, container) {
-      if (typeof document === 'undefined') return;
       container = container || document.getElementById('history-list-container');
       if (!container) return;
 
@@ -244,246 +250,200 @@
           <div class="empty-state">
             <div class="empty-icon">🔍</div>
             <p>Không tìm thấy giao dịch nào</p>
-          </div>
-        `;
+            <p class="empty-hint">Thử thay đổi bộ lọc hoặc khoảng thời gian</p>
+          </div>`;
         if (loadMoreBtn) loadMoreBtn.hidden = true;
         return;
       }
 
-      // Pagination batching logic
-      const totalCount = transactions.length;
-      const visibleBatch = transactions.slice(0, this.pagination.visibleCount);
-      const remainingCount = totalCount - visibleBatch.length;
+      const total = transactions.length;
+      const visible = transactions.slice(0, this.pagination.visibleCount);
+      const remaining = total - visible.length;
 
       if (loadMoreBtn) {
-        if (remainingCount > 0) {
-          loadMoreBtn.hidden = false;
-          if (loadMoreCount) loadMoreCount.textContent = `(Còn ${remainingCount} giao dịch)`;
-        } else {
-          loadMoreBtn.hidden = true;
+        loadMoreBtn.hidden = remaining <= 0;
+        if (loadMoreCount) {
+          loadMoreCount.textContent = remaining > 0 ? `(Còn ${remaining} giao dịch)` : '';
         }
       }
 
-      const groups = this.groupTransactionsByDate(visibleBatch);
-      const db = global.DB || (global.window && global.window.DB);
-      const formatVND = (db && db.formatVND) || global.formatVND || (n => Number(n).toLocaleString('vi-VN') + ' ₫');
-
+      const groups = this.groupByDate(visible);
       let html = '';
+
       groups.forEach(group => {
+        const dateLabel = this._formatDateLabel(group.date);
         html += `
           <div class="history-group">
             <div class="history-group-header">
-              <span class="group-date">${this.escapeHTML(group.date)}</span>
+              <span class="group-date">${escapeHTML(dateLabel)}</span>
               <span class="group-totals">
                 ${group.totalIncome > 0 ? `<span class="income-badge">+${formatVND(group.totalIncome)}</span>` : ''}
                 ${group.totalExpense > 0 ? `<span class="expense-badge">-${formatVND(group.totalExpense)}</span>` : ''}
               </span>
             </div>
-            <div class="history-group-items">
-        `;
+            <div class="history-group-items">`;
 
         group.transactions.forEach(tx => {
           const isIncome = tx.type === 'income';
+          const icon = getCatIcon(tx.category, tx.type);
           html += `
             <div class="history-item ${isIncome ? 'income' : 'expense'}" data-id="${tx.id}">
-              <div class="item-icon">${isIncome ? '📈' : '📉'}</div>
+              <div class="item-icon">${icon}</div>
               <div class="item-details">
-                <div class="item-category">${this.escapeHTML(tx.category || 'Khác')}</div>
-                <div class="item-note">${this.escapeHTML(tx.note || '')}</div>
+                <div class="item-category">${escapeHTML(tx.category || 'Khác')}</div>
+                ${tx.note ? `<div class="item-note">${escapeHTML(tx.note)}</div>` : ''}
               </div>
-              <div class="item-amount ${isIncome ? 'income-text' : 'expense-text'}">
-                ${isIncome ? '+' : '-'}${formatVND(tx.amount)}
+              <div class="item-right">
+                <div class="item-amount ${isIncome ? 'income-text' : 'expense-text'}">
+                  ${isIncome ? '+' : '-'}${formatVND(tx.amount)}
+                </div>
+                <div class="item-actions">
+                  <button type="button" class="btn-icon edit-tx" data-id="${tx.id}" title="Sửa" aria-label="Sửa giao dịch">✏️</button>
+                  <button type="button" class="btn-icon delete-tx" data-id="${tx.id}" title="Xóa" aria-label="Xóa giao dịch">🗑️</button>
+                </div>
               </div>
-              <div class="item-actions">
-                <button type="button" class="btn-icon edit-tx" data-id="${tx.id}" title="Sửa">✏️</button>
-                <button type="button" class="btn-icon delete-tx" data-id="${tx.id}" title="Xóa">🗑️</button>
-              </div>
-            </div>
-          `;
+            </div>`;
         });
 
-        html += `
-            </div>
-          </div>
-        `;
+        html += `</div></div>`;
       });
 
       container.innerHTML = html;
     }
 
-    /**
-     * Open Edit Transaction Modal
-     * @param {string} id 
-     */
-    openEditModal(id) {
-      if (typeof document === 'undefined') return;
-      const db = global.DB || (global.window && global.window.DB);
-      if (!db || typeof db.getTransactions !== 'function') return;
+    /** Format date string YYYY-MM-DD → readable Vietnamese label */
+    _formatDateLabel(dateStr) {
+      if (!dateStr || dateStr === 'Khác') return dateStr;
+      try {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const date = new Date(y, m - 1, d);
+        const weekdays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+        return `${weekdays[date.getDay()]}, ${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+      } catch (_) {
+        return dateStr;
+      }
+    }
 
-      const txs = db.getTransactions({ includeDeleted: false });
-      const tx = txs.find(t => t.id === id);
+    /* ----------------------------------------------------------------
+       Edit Modal
+       ---------------------------------------------------------------- */
+    openEditModal(id) {
+      const db = getDB();
+      if (!db) return;
+      const tx = db.getTransactions({ includeDeleted: false }).find(t => t.id === id);
       if (!tx) return;
 
       this.activeEditId = id;
       const modal = document.getElementById('modal-edit-tx');
       if (!modal) return;
 
-      const idInput = document.getElementById('edit-tx-id');
-      const amountInput = document.getElementById('edit-tx-amount');
-      const categorySelect = document.getElementById('edit-tx-category');
-      const dateInput = document.getElementById('edit-tx-date');
-      const noteInput = document.getElementById('edit-tx-note');
+      document.getElementById('edit-tx-id').value = tx.id;
       const expenseRadio = document.getElementById('edit-type-expense');
       const incomeRadio = document.getElementById('edit-type-income');
+      if (tx.type === 'income') { if (incomeRadio) incomeRadio.checked = true; }
+      else { if (expenseRadio) expenseRadio.checked = true; }
 
-      if (idInput) idInput.value = tx.id;
-      if (tx.type === 'income') {
-        if (incomeRadio) incomeRadio.checked = true;
-      } else {
-        if (expenseRadio) expenseRadio.checked = true;
-      }
+      const fmtInput = global.formatVNDInput || (v => v ? Number(v).toLocaleString('vi-VN') : '');
+      const amtEl = document.getElementById('edit-tx-amount');
+      if (amtEl) amtEl.value = fmtInput(tx.amount);
+      const dateEl = document.getElementById('edit-tx-date');
+      if (dateEl) dateEl.value = tx.date;
+      const noteEl = document.getElementById('edit-tx-note');
+      if (noteEl) noteEl.value = tx.note || '';
 
-      const formatVNDInput = global.formatVNDInput || (v => v ? Number(v).toLocaleString('vi-VN') : '');
-      if (amountInput) amountInput.value = formatVNDInput(tx.amount);
-      if (dateInput) dateInput.value = tx.date;
-      if (noteInput) noteInput.value = tx.note || '';
-
-      // Populate categories for edit modal
       this.populateEditCategories(tx.type, tx.category);
 
       modal.removeAttribute('hidden');
       modal.setAttribute('aria-hidden', 'false');
     }
 
-    /**
-     * Populate edit modal category options
-     * @param {string} type 
-     * @param {string} selectedCat 
-     */
     populateEditCategories(type, selectedCat) {
-      if (typeof document === 'undefined') return;
       const selectEl = document.getElementById('edit-tx-category');
       if (!selectEl) return;
 
+      // Always reset first
+      selectEl.innerHTML = '';
+
+      const mgr = getCatMgr();
       let categories = [];
-      if (global.Categories && typeof global.Categories.getActive === 'function') {
-        categories = global.Categories.getActive(type);
+      if (mgr && typeof mgr.getActive === 'function') {
+        categories = mgr.getActive(type);
       } else {
-        const db = global.DB || (global.window && global.window.DB);
+        const db = getDB();
         if (db && typeof db.getCategories === 'function') {
-          categories = db.getCategories(true).filter(c => !c.isHidden && c.type === type);
+          categories = db.getCategories(true).filter(c => !c.isHidden && !c.is_hidden && c.type === type);
         }
       }
 
-      const groupsMap = new Map();
+      const groups = new Map();
       categories.forEach(cat => {
-        const gName = cat.group || 'Khác';
-        if (!groupsMap.has(gName)) {
-          groupsMap.set(gName, []);
-        }
-        groupsMap.get(gName).push(cat);
+        const g = cat.group || 'Khác';
+        if (!groups.has(g)) groups.set(g, []);
+        groups.get(g).push(cat);
       });
 
-      groupsMap.forEach((catList, gName) => {
-        const optgroup = document.createElement('optgroup');
-        optgroup.label = gName;
-        catList.forEach(cat => {
+      groups.forEach((list, gName) => {
+        const og = document.createElement('optgroup');
+        og.label = gName;
+        list.forEach(cat => {
           const opt = document.createElement('option');
           opt.value = cat.name;
           opt.textContent = `${cat.icon ? cat.icon + ' ' : ''}${cat.name}`;
-          optgroup.appendChild(opt);
+          og.appendChild(opt);
         });
-        selectEl.appendChild(optgroup);
+        selectEl.appendChild(og);
       });
 
-      // If existing category is hidden or custom, ensure option exists
+      // Ensure selected category exists even if hidden
       if (selectedCat && !categories.some(c => c.name === selectedCat)) {
-        const customOpt = document.createElement('option');
-        customOpt.value = selectedCat;
-        customOpt.textContent = selectedCat;
-        selectEl.appendChild(customOpt);
+        const opt = document.createElement('option');
+        opt.value = selectedCat;
+        opt.textContent = selectedCat;
+        selectEl.appendChild(opt);
       }
 
       if (selectedCat) selectEl.value = selectedCat;
     }
 
-    /**
-     * Close Edit Transaction Modal
-     */
     closeEditModal() {
-      if (typeof document === 'undefined') return;
       const modal = document.getElementById('modal-edit-tx');
-      if (modal) {
-        modal.setAttribute('hidden', '');
-        modal.setAttribute('aria-hidden', 'true');
-      }
+      if (modal) { modal.setAttribute('hidden', ''); modal.setAttribute('aria-hidden', 'true'); }
       this.activeEditId = null;
     }
 
-    /**
-     * Handle Edit Modal Form Submission
-     * @param {Event} e 
-     */
     handleSaveEdit(e) {
-      if (e && typeof e.preventDefault === 'function') e.preventDefault();
-      if (typeof document === 'undefined') return;
-
-      const idInput = document.getElementById('edit-tx-id');
-      const id = idInput ? idInput.value : this.activeEditId;
+      e && e.preventDefault();
+      const id = document.getElementById('edit-tx-id')?.value || this.activeEditId;
       if (!id) return;
 
       const typeRadio = document.querySelector('input[name="edit-tx-type"]:checked');
       const type = typeRadio ? typeRadio.value : 'expense';
+      const parseRaw = global.parseRawAmount || (s => parseInt(String(s).replace(/\D/g,''), 10) || 0);
+      const amount = parseRaw(document.getElementById('edit-tx-amount')?.value || '');
+      const category = document.getElementById('edit-tx-category')?.value || '';
+      const date = document.getElementById('edit-tx-date')?.value || '';
+      const note = (document.getElementById('edit-tx-note')?.value || '').trim();
 
-      const amountInput = document.getElementById('edit-tx-amount');
-      const parseRawAmount = global.parseRawAmount || (str => str ? parseInt(String(str).replace(/\D/g, ''), 10) : 0);
-      const amount = parseRawAmount(amountInput ? amountInput.value : '');
+      if (!amount || amount <= 0) { global.Toast?.show('Số tiền phải lớn hơn 0', 'error'); return; }
+      if (!category) { global.Toast?.show('Vui lòng chọn hạng mục', 'warning'); return; }
 
-      const categorySelect = document.getElementById('edit-tx-category');
-      const category = categorySelect ? categorySelect.value : '';
-
-      const dateInput = document.getElementById('edit-tx-date');
-      const date = dateInput ? dateInput.value : '';
-
-      const noteInput = document.getElementById('edit-tx-note');
-      const note = noteInput ? noteInput.value.trim() : '';
-
-      if (!amount || isNaN(amount) || amount <= 0) {
-        if (global.Toast) global.Toast.show('Số tiền phải lớn hơn 0', 'error');
-        return;
-      }
-
-      if (!category) {
-        if (global.Toast) global.Toast.show('Vui lòng chọn hạng mục', 'warning');
-        return;
-      }
-
-      const db = global.DB || (global.window && global.window.DB);
+      const db = getDB();
       if (db && typeof db.updateTransaction === 'function') {
-        const updatedTx = db.updateTransaction(id, { type, amount, category, date, note });
+        db.updateTransaction(id, { type, amount, category, date, note });
         this.closeEditModal();
-
-        if (global.Toast) global.Toast.show('Đã cập nhật giao dịch thành công!', 'success');
-
-        if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('transactionupdated', { detail: updatedTx }));
-        }
-
+        global.Toast?.show('Đã cập nhật giao dịch thành công!', 'success');
+        try { window.dispatchEvent(new CustomEvent('transactionupdated')); } catch (_) {}
         this.render();
       }
     }
 
-    /**
-     * Open Delete Confirmation Modal
-     * @param {string} id 
-     */
+    /* ----------------------------------------------------------------
+       Delete Modal
+       ---------------------------------------------------------------- */
     openDeleteModal(id) {
-      if (typeof document === 'undefined') return;
-      const db = global.DB || (global.window && global.window.DB);
-      if (!db || typeof db.getTransactions !== 'function') return;
-
-      const txs = db.getTransactions({ includeDeleted: false });
-      const tx = txs.find(t => t.id === id);
+      const db = getDB();
+      if (!db) return;
+      const tx = db.getTransactions({ includeDeleted: false }).find(t => t.id === id);
       if (!tx) return;
 
       this.activeDeleteId = id;
@@ -491,262 +451,190 @@
       const summaryEl = document.getElementById('delete-tx-summary');
       if (!modal) return;
 
-      const formatVND = (db && db.formatVND) || (n => Number(n).toLocaleString('vi-VN') + ' ₫');
-
       if (summaryEl) {
         summaryEl.innerHTML = `
           <div><strong>Loại:</strong> ${tx.type === 'income' ? '💰 Thu nhập' : '💸 Chi tiêu'}</div>
-          <div><strong>Hạng mục:</strong> ${this.escapeHTML(tx.category)}</div>
+          <div><strong>Hạng mục:</strong> ${escapeHTML(tx.category)}</div>
           <div><strong>Số tiền:</strong> ${formatVND(tx.amount)}</div>
-          <div><strong>Ngày:</strong> ${this.escapeHTML(tx.date)}</div>
-          ${tx.note ? `<div><strong>Ghi chú:</strong> ${this.escapeHTML(tx.note)}</div>` : ''}
-        `;
+          <div><strong>Ngày:</strong> ${escapeHTML(tx.date)}</div>
+          ${tx.note ? `<div><strong>Ghi chú:</strong> ${escapeHTML(tx.note)}</div>` : ''}`;
       }
 
       modal.removeAttribute('hidden');
       modal.setAttribute('aria-hidden', 'false');
     }
 
-    /**
-     * Close Delete Confirmation Modal
-     */
     closeDeleteModal() {
-      if (typeof document === 'undefined') return;
       const modal = document.getElementById('modal-delete-tx');
-      if (modal) {
-        modal.setAttribute('hidden', '');
-        modal.setAttribute('aria-hidden', 'true');
-      }
+      if (modal) { modal.setAttribute('hidden', ''); modal.setAttribute('aria-hidden', 'true'); }
       this.activeDeleteId = null;
     }
 
-    /**
-     * Handle Delete Confirmation
-     */
     handleConfirmDelete() {
       if (!this.activeDeleteId) return;
       const id = this.activeDeleteId;
-
-      const db = global.DB || (global.window && global.window.DB);
+      const db = getDB();
       if (db && typeof db.deleteTransaction === 'function') {
         db.deleteTransaction(id);
         this.closeDeleteModal();
-
-        if (global.Toast) global.Toast.show('Đã xóa giao dịch!', 'info');
-
-        if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('transactiondeleted', { detail: { id } }));
-        }
-
+        global.Toast?.show('Đã xóa giao dịch!', 'info');
+        try { window.dispatchEvent(new CustomEvent('transactiondeleted', { detail: { id } })); } catch (_) {}
         this.render();
       }
     }
 
-    /**
-     * Primary Render View Entrypoint
-     */
+    /* ----------------------------------------------------------------
+       Render (main entry)
+       ---------------------------------------------------------------- */
     render() {
       if (typeof document === 'undefined') return;
       this.populateCategories();
-      const filteredTxs = this.filterTransactions();
-      const container = document.getElementById('history-list-container');
-      this.renderHistoryList(filteredTxs, container);
+      const filtered = this.filterTransactions();
+      this.renderHistoryList(filtered);
     }
 
-    /**
-     * Bind UI & Event Listeners
-     */
+    /* ----------------------------------------------------------------
+       Event Listeners
+       ---------------------------------------------------------------- */
     initEventListeners() {
       if (this.isInitialized || typeof document === 'undefined') return;
       this.isInitialized = true;
 
-      // 1. Search Query Input (300ms Debounce)
+      // Search input (300ms debounce)
       const searchInput = document.getElementById('search-query');
-      const clearSearchBtn = document.getElementById('btn-clear-search');
+      const clearBtn = document.getElementById('btn-clear-search');
 
-      if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-          const val = e.target.value;
-          if (clearSearchBtn) clearSearchBtn.hidden = !val;
-
-          if (this.debounceTimer) clearTimeout(this.debounceTimer);
-          this.debounceTimer = setTimeout(() => {
-            this.currentFilters.query = val;
-            this.pagination.visibleCount = this.pagination.pageSize;
-            this.render();
-          }, 300);
-        });
-      }
-
-      if (clearSearchBtn) {
-        clearSearchBtn.addEventListener('click', () => {
-          if (searchInput) searchInput.value = '';
-          clearSearchBtn.hidden = true;
-          this.currentFilters.query = '';
+      searchInput?.addEventListener('input', e => {
+        const val = e.target.value;
+        if (clearBtn) clearBtn.hidden = !val;
+        clearTimeout(this.debounceTimer);
+        this.debounceTimer = setTimeout(() => {
+          this.currentFilters.query = val;
           this.pagination.visibleCount = this.pagination.pageSize;
           this.render();
-        });
-      }
+        }, 300);
+      });
 
-      // 2. Type Filter Select
-      const typeSelect = document.getElementById('filter-type');
-      if (typeSelect) {
-        typeSelect.addEventListener('change', (e) => {
-          this.currentFilters.type = e.target.value;
-          this.pagination.visibleCount = this.pagination.pageSize;
-          this.render();
-        });
-      }
+      clearBtn?.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        clearBtn.hidden = true;
+        this.currentFilters.query = '';
+        this.pagination.visibleCount = this.pagination.pageSize;
+        this.render();
+      });
 
-      // 3. Category Filter Select
-      const categorySelect = document.getElementById('filter-category');
-      if (categorySelect) {
-        categorySelect.addEventListener('change', (e) => {
-          this.currentFilters.category = e.target.value;
-          this.pagination.visibleCount = this.pagination.pageSize;
-          this.render();
-        });
-      }
+      // Type filter
+      document.getElementById('filter-type')?.addEventListener('change', e => {
+        this.currentFilters.type = e.target.value;
+        this.pagination.visibleCount = this.pagination.pageSize;
+        this.render();
+      });
 
-      // 4. Date Preset Range Select
+      // Category filter
+      document.getElementById('filter-category')?.addEventListener('change', e => {
+        this.currentFilters.category = e.target.value;
+        this.pagination.visibleCount = this.pagination.pageSize;
+        this.render();
+      });
+
+      // Date preset
       const presetSelect = document.getElementById('filter-date-preset');
       if (presetSelect) {
-        // Set initial preset
         this.applyDatePreset(presetSelect.value || 'this_month');
-
-        presetSelect.addEventListener('change', (e) => {
+        presetSelect.addEventListener('change', e => {
           this.applyDatePreset(e.target.value);
           this.pagination.visibleCount = this.pagination.pageSize;
           this.render();
         });
       }
 
-      // 5. Start and End Date Inputs
-      const startDateInput = document.getElementById('filter-start-date');
-      const endDateInput = document.getElementById('filter-end-date');
-
-      const handleCustomDateChange = () => {
+      // Custom date inputs
+      const startEl = document.getElementById('filter-start-date');
+      const endEl = document.getElementById('filter-end-date');
+      const handleCustomDate = () => {
         if (presetSelect) presetSelect.value = 'custom';
         this.currentFilters.preset = 'custom';
-        this.currentFilters.startDate = startDateInput ? startDateInput.value : '';
-        this.currentFilters.endDate = endDateInput ? endDateInput.value : '';
+        this.currentFilters.startDate = startEl?.value || '';
+        this.currentFilters.endDate = endEl?.value || '';
         this.pagination.visibleCount = this.pagination.pageSize;
         this.render();
       };
+      startEl?.addEventListener('change', handleCustomDate);
+      endEl?.addEventListener('change', handleCustomDate);
 
-      if (startDateInput) startDateInput.addEventListener('change', handleCustomDateChange);
-      if (endDateInput) endDateInput.addEventListener('change', handleCustomDateChange);
+      // Load more
+      document.getElementById('btn-load-more')?.addEventListener('click', () => {
+        this.pagination.visibleCount += this.pagination.pageSize;
+        this.render();
+      });
 
-      // 6. Load More Button (Pagination)
-      const loadMoreBtn = document.getElementById('btn-load-more');
-      if (loadMoreBtn) {
-        loadMoreBtn.addEventListener('click', () => {
-          this.pagination.visibleCount += this.pagination.pageSize;
-          this.render();
-        });
-      }
+      // Edit / Delete delegation in history list
+      document.getElementById('history-list-container')?.addEventListener('click', e => {
+        const editBtn = e.target.closest('.edit-tx');
+        if (editBtn) { this.openEditModal(editBtn.dataset.id); return; }
+        const delBtn = e.target.closest('.delete-tx');
+        if (delBtn) { this.openDeleteModal(delBtn.dataset.id); }
+      });
 
-      // 7. Event Delegation for Edit & Delete icons in History List
-      const historyContainer = document.getElementById('history-list-container');
-      if (historyContainer) {
-        historyContainer.addEventListener('click', (e) => {
-          const editBtn = e.target.closest('.edit-tx');
-          if (editBtn) {
-            const id = editBtn.getAttribute('data-id');
-            if (id) this.openEditModal(id);
-            return;
-          }
-
-          const deleteBtn = e.target.closest('.delete-tx');
-          if (deleteBtn) {
-            const id = deleteBtn.getAttribute('data-id');
-            if (id) this.openDeleteModal(id);
-            return;
-          }
-        });
-      }
-
-      // 8. Close Modal Controls
-      document.addEventListener('click', (e) => {
+      // Modal close buttons & backdrop
+      document.addEventListener('click', e => {
         const closeBtn = e.target.closest('[data-close-modal]');
         if (closeBtn) {
-          const modalType = closeBtn.getAttribute('data-close-modal');
-          if (modalType === 'edit-tx') this.closeEditModal();
-          if (modalType === 'delete-tx') this.closeDeleteModal();
+          const target = closeBtn.dataset.closeModal;
+          if (target === 'edit-tx') this.closeEditModal();
+          if (target === 'delete-tx') this.closeDeleteModal();
           return;
         }
-
-        // Backdrop click to close
-        if (e.target.classList && e.target.classList.contains('modal-backdrop')) {
+        if (e.target.classList?.contains('modal-backdrop')) {
           if (e.target.id === 'modal-edit-tx') this.closeEditModal();
           if (e.target.id === 'modal-delete-tx') this.closeDeleteModal();
         }
       });
 
-      // 9. Edit Form Submission & Type Switcher Listener
-      const editForm = document.getElementById('form-edit-tx');
-      if (editForm) {
-        editForm.addEventListener('submit', (e) => this.handleSaveEdit(e));
-      }
+      // Edit form submit
+      document.getElementById('form-edit-tx')?.addEventListener('submit', e => this.handleSaveEdit(e));
 
-      const editTypeRadios = document.querySelectorAll('input[name="edit-tx-type"]');
-      editTypeRadios.forEach(radio => {
-        radio.addEventListener('change', (e) => {
-          this.populateEditCategories(e.target.value);
-        });
+      // Edit type radios
+      document.querySelectorAll('input[name="edit-tx-type"]').forEach(r => {
+        r.addEventListener('change', e => this.populateEditCategories(e.target.value));
       });
 
-      const editAmountInput = document.getElementById('edit-tx-amount');
-      if (editAmountInput) {
-        editAmountInput.addEventListener('input', (e) => {
-          if (global.TransactionForm && typeof global.TransactionForm.handleAmountInput === 'function') {
-            global.TransactionForm.handleAmountInput(e);
-          }
-        });
-      }
+      // Edit amount formatter
+      document.getElementById('edit-tx-amount')?.addEventListener('input', e => {
+        global.TransactionForm?.handleAmountInput?.(e);
+      });
 
-      // 10. Confirm Delete Button Listener
-      const confirmDeleteBtn = document.getElementById('btn-confirm-delete-tx');
-      if (confirmDeleteBtn) {
-        confirmDeleteBtn.addEventListener('click', () => this.handleConfirmDelete());
-      }
+      // Confirm delete button
+      document.getElementById('btn-confirm-delete-tx')?.addEventListener('click', () => this.handleConfirmDelete());
 
-      // 11. Global Custom Window Event Listeners
-      if (typeof window !== 'undefined') {
-        window.addEventListener('transactionadded', () => this.render());
-        window.addEventListener('transactionupdated', () => this.render());
-        window.addEventListener('transactiondeleted', () => this.render());
-        window.addEventListener('transactionschanged', () => this.render());
-        window.addEventListener('categorieschanged', () => {
-          this.populateCategories();
-          this.render();
-        });
-      }
+      // Global events
+      window.addEventListener('transactionadded', () => { this.pagination.visibleCount = this.pagination.pageSize; this.render(); });
+      window.addEventListener('transactionupdated', () => this.render());
+      window.addEventListener('transactiondeleted', () => this.render());
+      window.addEventListener('transactionschanged', () => this.render());
+      window.addEventListener('categorieschanged', () => { this.populateCategories(); this.render(); });
     }
 
-    /**
-     * Initialization method
-     */
     init() {
       this.initEventListeners();
       this.render();
     }
   }
 
+  /* ------------------------------------------------------------------
+     Exports
+     ------------------------------------------------------------------ */
   const manager = new HistoryManager();
+
   global.HistoryManager = manager;
-  global.History = manager;
   global.HistoryUI = manager;
-  if (typeof window !== 'undefined') {
-    window.HistoryManager = manager;
-    window.History = manager;
-    window.HistoryUI = manager;
-  }
+  global.History = manager;
+
   if (typeof globalThis !== 'undefined') {
     globalThis.HistoryManager = manager;
-    globalThis.History = manager;
     globalThis.HistoryUI = manager;
   }
+
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = manager;
   }
