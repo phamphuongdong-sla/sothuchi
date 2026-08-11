@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#4f46e5" id="theme-color-meta">
+  <meta name="color-scheme" content="light dark">
+  <title>Sổ Thu Chi Cá Nhân - Quản lý tài chính PWA</title>
+  
+  <!-- PWA Manifest & Icons -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sổ Thu Chi">
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app-root" class="app-layout">
+    <!-- Header -->
+    <header id="app-header" class="app-header">
+      <div class="header-brand">
+        <span class="brand-icon" aria-hidden="true">💰</span>
+        <h1 class="app-title">Sổ Thu Chi</h1>
+      </div>
+      <div class="header-center">
+        <h2 id="view-title" class="view-title">Giao dịch</h2>
+      </div>
+      <div class="header-actions">
+        <!-- Sync Status Indicator -->
+        <div id="sync-status" class="sync-status status-offline" title="Trạng thái đồng bộ">
+          <span class="status-dot"></span>
+          <span class="status-text">Ngoại tuyến</span>
+        </div>
+        <!-- Theme Toggle Button -->
+        <button id="theme-toggle" class="icon-btn" aria-label="Đổi giao diện Dark/Light Mode" type="button">
+          <span class="theme-icon" aria-hidden="true">🌙</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation (Mobile Bottom Bar / Desktop Sidebar) -->
+    <nav id="app-nav" class="app-nav" aria-label="Điều hướng ứng dụng">
+      <div class="nav-brand-desktop" aria-hidden="true">
+        <span class="brand-icon">💰</span>
+        <span class="brand-name">Sổ Thu Chi</span>
+      </div>
+      <ul class="nav-list" role="tablist">
+        <li class="nav-item">
+          <a href="#transactions" id="nav-transactions" class="nav-link active" data-view="transactions" role="tab" aria-selected="true">
+            <span class="nav-icon">💸</span>
+            <span class="nav-label">Giao dịch</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#budget" id="nav-budget" class="nav-link" data-view="budget" role="tab" aria-selected="false">
+            <span class="nav-icon">📊</span>
+            <span class="nav-label">Lịch sử</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#reports" id="nav-reports" class="nav-link" data-view="reports" role="tab" aria-selected="false">
+            <span class="nav-icon">📈</span>
+            <span class="nav-label">Báo cáo</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#settings" id="nav-settings" class="nav-link" data-view="settings" role="tab" aria-selected="false">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-label">Cài đặt</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Main Views Container -->
+    <main id="main-content" class="main-content app-view" role="main">
+      <!-- Section: Transactions View -->
+      <section id="view-transactions" class="view-panel active" data-view-content="transactions" data-route="transactions">
+        <div class="card form-card">
+          <div class="card-header">
+            <h3 class="card-title">Ghi Chép Giao Dịch</h3>
+            <p class="card-subtitle">Nhập nhanh khoản thu hoặc chi tiêu mới</p>
+          </div>
+
+          <form id="transaction-form" class="transaction-form" novalidate>
+            <!-- 1. Transaction Type Toggle (Income / Expense) -->
+            <div class="form-group">
+              <label class="form-label">Loại giao dịch</label>
+              <div class="type-toggle-container" role="radiogroup" aria-label="Loại giao dịch">
+                <input type="radio" id="type-expense" name="tx-type" value="expense" checked class="type-radio-input">
+                <label for="type-expense" class="type-toggle-btn type-btn-expense">
+                  <span class="type-icon">💸</span>
+                  <span>Chi tiêu</span>
+                </label>
+
+                <input type="radio" id="type-income" name="tx-type" value="income" class="type-radio-input">
+                <label for="type-income" class="type-toggle-btn type-btn-income">
+                  <span class="type-icon">💰</span>
+                  <span>Thu nhập</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- 2. Amount Input Field with Currency Formatting -->
+            <div class="form-group">
+              <label for="input-amount" class="form-label">
+                Số tiền <span class="required-star">*</span>
+              </label>
+              <div class="input-wrapper amount-wrapper">
+                <input 
+                  type="text" 
+                  id="input-amount" 
+                  name="amount" 
+                  class="form-control amount-input" 
+                  placeholder="0" 
+                  inputmode="numeric" 
+                  autocomplete="off" 
+                  required
+                >
+                <span class="currency-suffix">₫</span>
+              </div>
+              <span class="field-error" id="amount-error" aria-live="polite"></span>
+            </div>
+
+            <!-- 3. Dynamic Category Select Dropdown -->
+            <div class="form-group">
+              <label for="input-category" class="form-label">
+                Hạng mục <span class="required-star">*</span>
+              </label>
+              <select id="input-category" name="category" class="form-control category-select" required>
+                <option value="" disabled selected>-- Chọn hạng mục --</option>
+              </select>
+              <span class="field-error" id="category-error" aria-live="polite"></span>
+            </div>
+
+            <!-- 4. Date Picker Input -->
+            <div class="form-group">
+              <label for="input-date" class="form-label">
+                Ngày giao dịch <span class="required-star">*</span>
+              </label>
+              <input 
+                type="date" 
+                id="input-date" 
+                name="date" 
+                class="form-control" 
+                required
+              >
+              <span class="field-error" id="date-error" aria-live="polite"></span>
+            </div>
+
+            <!-- 5. Note Input Field -->
+            <div class="form-group">
+              <label for="input-note" class="form-label">Ghi chú</label>
+              <input 
+                type="text" 
+                id="input-note" 
+                name="note" 
+                class="form-control" 
+                placeholder="Ví dụ: Ăn trưa, Cà phê, Lương tháng 8..." 
+                maxlength="200" 
+                autocomplete="off"
+              >
+            </div>
+
+            <!-- Form Action Buttons -->
+            <div class="form-actions">
+              <button type="submit" id="btn-submit-tx" class="btn btn-primary btn-submit">
+                <span class="btn-icon">➕</span>
+                <span>Lưu giao dịch</span>
+              </button>
+              <button type="button" id="btn-reset-tx" class="btn btn-secondary btn-reset">
+                <span>Đặt lại</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Section: History & Budget View -->
+      <section id="view-budget" class="view-panel" data-view-content="budget" data-route="budget">
+        <div class="card history-card">
+          <div class="card-header">
+            <h3 class="card-title">Lịch Sử Giao Dịch & Tìm Kiếm</h3>
+            <p class="card-subtitle">Tra cứu, lọc và quản lý lịch sử thu chi</p>
+          </div>
+
+          <!-- Enhanced Filter Controls -->
+          <div class="filter-controls">
+            <div class="form-group search-group">
+              <div class="input-wrapper search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-query" class="form-control search-input" placeholder="Tìm theo ghi chú, hạng mục, số tiền...">
+                <button type="button" id="btn-clear-search" class="clear-search-btn" title="Xóa tìm kiếm" hidden>&times;</button>
+              </div>
+            </div>
+
+            <div class="filter-row">
+              <div class="form-group flex-1">
+                <label for="filter-type" class="form-label-sm">Loại giao dịch</label>
+                <select id="filter-type" class="form-control">
+                  <option value="all">Tất cả loại</option>
+                  <option value="income">💰 Thu nhập</option>
+                  <option value="expense">💸 Chi tiêu</option>
+                </select>
+              </div>
+              <div class="form-group flex-1">
+                <label for="filter-category" class="form-label-sm">Hạng mục</label>
+                <select id="filter-category" class="form-control">
+                  <option value="all">Tất cả hạng mục</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="filter-row">
+              <div class="form-group flex-1">
+                <label for="filter-date-preset" class="form-label-sm">Khoảng thời gian</label>
+                <select id="filter-date-preset" class="form-control">
+                  <option value="this_month" selected>Tháng này</option>
+                  <option value="last_month">Tháng trước</option>
+                  <option value="this_year">Năm nay</option>
+                  <option value="all">Tất cả thời gian</option>
+                  <option value="custom">Tùy chỉnh ngày</option>
+                </select>
+              </div>
+              <div class="form-group flex-1 date-range-inputs">
+                <label class="form-label-sm">Từ ngày - Đến ngày</label>
+                <div class="date-input-group">
+                  <input type="date" id="filter-start-date" class="form-control" title="Từ ngày">
+                  <span class="date-sep">-</span>
+                  <input type="date" id="filter-end-date" class="form-control" title="Đến ngày">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- History List Container -->
+          <div id="history-list-container" class="history-list-container"></div>
+
+          <!-- Pagination / Load More Container -->
+          <div id="history-pagination-container" class="pagination-container">
+            <button type="button" id="btn-load-more" class="btn btn-secondary btn-load-more" hidden>
+              <span>Xem thêm</span>
+              <span id="load-more-count" class="badge-count"></span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Reports & Charts View -->
+      <section id="view-reports" class="view-panel" data-view-content="reports" data-route="reports">
+        <!-- 1. Reports Date Range & Filter Bar -->
+        <div class="card reports-filter-card">
+          <div class="reports-filter-bar">
+            <div class="form-group filter-group flex-1">
+              <label for="chart-date-range" class="form-label">Khoảng thời gian báo cáo</label>
+              <select id="chart-date-range" class="form-control">
+                <option value="all_time" selected>Tất cả thời gian</option>
+                <option value="this_month">Tháng này</option>
+                <option value="last_month">Tháng trước</option>
+                <option value="this_year">Năm nay</option>
+                <option value="custom">Tùy chỉnh ngày...</option>
+              </select>
+            </div>
+            <div id="chart-custom-date-container" class="custom-date-inputs hidden flex-1">
+              <div class="form-group">
+                <label for="chart-start-date" class="form-label">Từ ngày</label>
+                <input type="date" id="chart-start-date" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="chart-end-date" class="form-label">Đến ngày</label>
+                <input type="date" id="chart-end-date" class="form-control">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Financial Health Indicator Summary Cards (4 KPI Cards) -->
+        <div class="reports-summary-cards">
+          <div class="summary-card card-income">
+            <div class="card-icon">💰</div>
+            <div class="card-info">
+              <span class="summary-label">Tổng Thu</span>
+              <span id="total-income" class="summary-value income-text">0 ₫</span>
+            </div>
+          </div>
+          <div class="summary-card card-expense">
+            <div class="card-icon">💸</div>
+            <div class="card-info">
+              <span class="summary-label">Tổng Chi</span>
+              <span id="total-expense" class="summary-value expense-text">0 ₫</span>
+            </div>
+          </div>
+          <div class="summary-card card-balance">
+            <div class="card-icon">⚖️</div>
+            <div class="card-info">
+              <span class="summary-label">Số Dư Còn Lại</span>
+              <span id="net-balance" class="summary-value">0 ₫</span>
+            </div>
+          </div>
+          <div class="summary-card card-savings">
+            <div class="card-icon">🎯</div>
+            <div class="card-info">
+              <span class="summary-label">Tỷ Lệ Tiết Kiệm</span>
+              <span id="savings-rate" class="summary-value">0.0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Visual Charts Grid Container -->
+        <div class="charts-container">
+          <div class="card chart-card">
+            <div class="chart-card-header">
+              <h4 class="chart-title">Cơ Cấu Hạng Mục</h4>
+              <div class="chart-type-toggle" role="radiogroup" aria-label="Loại hạng mục biểu đồ">
+                <button type="button" class="btn-toggle active" data-chart-category-type="expense">Chi tiêu</button>
+                <button type="button" class="btn-toggle" data-chart-category-type="income">Thu nhập</button>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="category-chart"></canvas>
+            </div>
+          </div>
+          <div class="card chart-card">
+            <div class="chart-card-header">
+              <h4 class="chart-title">So Sánh Thu Nhập vs Chi Tiêu</h4>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="income-expense-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Settings View -->
+      <section id="view-settings" class="view-panel" data-view-content="settings" data-route="settings">
+        <div class="card settings-card">
+          <div class="card-header">
+            <h3 class="card-title">Cài Đặt Kết Nối Google Sheets</h3>
+            <p class="card-subtitle">Dán đường dẫn Web App Endpoint URL từ Google Apps Script</p>
+          </div>
+          <form id="settings-form" class="settings-form">
+            <div class="form-group">
+              <label for="gas-url-input" class="form-label">Google Apps Script Endpoint URL</label>
+              <input 
+                type="url" 
+                id="gas-url-input" 
+                class="form-control" 
+                placeholder="https://script.google.com/macros/s/.../exec"
+                autocomplete="off"
+              >
+              <span class="field-hint">Chỉ chấp nhận URL https://script.google.com/macros/s/.../exec</span>
+            </div>
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="auto-sync-toggle" checked>
+                <span>Tự động đồng bộ khi có kết nối mạng</span>
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit" id="btn-save-settings" class="btn btn-primary">
+                💾 Lưu Cài Đặt
+              </button>
+              <button type="button" id="btn-test-connection" class="btn btn-secondary">
+                🔄 Kiểm Tra Kết Nối
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card settings-card mt-4">
+          <div class="card-header">
+            <h3 class="card-title">📱 Hướng Dẫn Cài Đặt PWA Lên Điện Thoại</h3>
+            <p class="card-subtitle">Cài đặt ứng dụng dùng trực tiếp trên màn hình chính mà không cần App Store / CH Play</p>
+          </div>
+          <div class="pwa-guide-content" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+            <div class="guide-item" style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem; background: rgba(79, 70, 229, 0.05); border-radius: 8px;">
+              <span style="font-size: 1.5rem;">🍎</span>
+              <div>
+                <strong style="color: var(--text-primary);">Trên iPhone (iOS Safari):</strong>
+                <p style="margin: 0.25rem 0 0; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.4;">
+                  1. Mở đường dẫn trang web bằng <strong>Safari</strong>.<br>
+                  2. Nhấn nút <strong>Chia sẻ</strong> (hình vuông có mũi tên chỉ lên ở đáy màn hình).<br>
+                  3. Chọn <strong>"Thêm vào MH chính" (Add to Home Screen)</strong>.
+                </p>
+              </div>
+            </div>
+            <div class="guide-item" style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem; background: rgba(16, 185, 129, 0.05); border-radius: 8px;">
+              <span style="font-size: 1.5rem;">🤖</span>
+              <div>
+                <strong style="color: var(--text-primary);">Trên Android (Google Chrome):</strong>
+                <p style="margin: 0.25rem 0 0; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.4;">
+                  1. Mở trang web bằng <strong>Chrome</strong>.<br>
+                  2. Nhấn vào dấu <strong>3 chấm (⋮)</strong> ở góc trên cùng bên phải.<br>
+                  3. Chọn <strong>"Cài đặt ứng dụng"</strong> hoặc <strong>"Thêm vào màn hình chính"</strong>.
+                </p>
+              </div>
+            </div>
+            <div class="guide-item" style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem; background: rgba(245, 158, 11, 0.05); border-radius: 8px;">
+              <span style="font-size: 1.5rem;">💻</span>
+              <div>
+                <strong style="color: var(--text-primary);">Lưu ý chạy trên máy tính local:</strong>
+                <p style="margin: 0.25rem 0 0; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.4;">
+                  Trình duyệt chặn Service Worker trên giao thức <code>file://</code>. Cần mở ứng dụng qua Local Web Server (ví dụ: <code>http://localhost:8000</code>) hoặc đưa lên web host (HTTPS) để nút PWA tự bật lên.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3-Tier Category Management Card -->
+        <div class="card settings-card mt-4">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <h3 class="card-title">📁 Quản Lý Hạng Mục 3 Tầng</h3>
+              <p class="card-subtitle">15 Nhóm chính & ~92 Hạng mục con - Cho phép tự thêm nhóm và hạng mục mới</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button type="button" id="btn-open-add-group" class="btn btn-secondary btn-sm">➕ Thêm Nhóm Chính</button>
+              <button type="button" id="btn-open-add-cat" class="btn btn-primary btn-sm">➕ Thêm Hạng Mục Con</button>
+            </div>
+          </div>
+          <div id="category-manager-tree" class="category-manager-tree" style="margin-top: 1rem;"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Edit Transaction Modal -->
+  <div id="modal-edit-tx" class="modal-backdrop" hidden aria-hidden="true">
+    <div class="modal-dialog card" role="dialog" aria-labelledby="edit-modal-title">
+      <div class="modal-header">
+        <h3 id="edit-modal-title" class="modal-title">Chỉnh Sửa Giao Dịch</h3>
+        <button type="button" class="modal-close-btn" data-close-modal="edit-tx" aria-label="Đóng">&times;</button>
+      </div>
+      <form id="form-edit-tx" class="modal-body transaction-form">
+        <input type="hidden" id="edit-tx-id" name="id">
+        
+        <div class="form-group">
+          <label class="form-label">Loại giao dịch</label>
+          <div class="type-toggle-container">
+            <input type="radio" id="edit-type-expense" name="edit-tx-type" value="expense" class="type-radio-input">
+            <label for="edit-type-expense" class="type-toggle-btn type-btn-expense">
+              <span>💸 Chi tiêu</span>
+            </label>
+            <input type="radio" id="edit-type-income" name="edit-tx-type" value="income" class="type-radio-input">
+            <label for="edit-type-income" class="type-toggle-btn type-btn-income">
+              <span>💰 Thu nhập</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-tx-amount" class="form-label">Số tiền <span class="required-star">*</span></label>
+          <div class="input-wrapper amount-wrapper">
+            <input type="text" id="edit-tx-amount" name="amount" class="form-control amount-input" inputmode="numeric" required>
+            <span class="currency-suffix">₫</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-tx-category" class="form-label">Hạng mục <span class="required-star">*</span></label>
+          <select id="edit-tx-category" name="category" class="form-control" required></select>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-tx-date" class="form-label">Ngày giao dịch <span class="required-star">*</span></label>
+          <input type="date" id="edit-tx-date" name="date" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-tx-note" class="form-label">Ghi chú</label>
+          <input type="text" id="edit-tx-note" name="note" class="form-control" placeholder="Ghi chú..." maxlength="200">
+        </div>
+
+        <div class="modal-footer form-actions">
+          <button type="button" class="btn btn-secondary" data-close-modal="edit-tx">Hủy</button>
+          <button type="submit" id="btn-save-edit-tx" class="btn btn-primary">Lưu Thay Đổi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="modal-delete-tx" class="modal-backdrop" hidden aria-hidden="true">
+    <div class="modal-dialog card modal-dialog-sm" role="dialog" aria-labelledby="delete-modal-title">
+      <div class="modal-header">
+        <h3 id="delete-modal-title" class="modal-title text-danger">Xác Nhận Xóa Giao Dịch</h3>
+        <button type="button" class="modal-close-btn" data-close-modal="delete-tx" aria-label="Đóng">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Bạn có chắc chắn muốn xóa giao dịch này không? Hành động này không thể hoàn tác.</p>
+        <div id="delete-tx-summary" class="delete-summary-card">
+          <!-- Dynamic target summary preview -->
+        </div>
+      </div>
+      <div class="modal-footer form-actions">
+        <button type="button" class="btn btn-secondary" data-close-modal="delete-tx">Hủy bỏ</button>
+        <button type="button" id="btn-confirm-delete-tx" class="btn btn-danger">Xóa Giao Dịch</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add Custom Group -->
+  <div id="modal-add-group" class="modal-backdrop" hidden aria-hidden="true">
+    <div class="modal-dialog card" role="dialog" aria-labelledby="add-group-modal-title">
+      <div class="modal-header">
+        <h3 id="add-group-modal-title" class="modal-title">Thêm Nhóm Chính Mới</h3>
+        <button type="button" class="modal-close-btn" data-close-modal="add-group" aria-label="Đóng">&times;</button>
+      </div>
+      <form id="form-add-group" class="modal-body transaction-form">
+        <div class="form-group">
+          <label for="add-group-type" class="form-label">Loại giao dịch</label>
+          <select id="add-group-type" class="form-control" required>
+            <option value="expense" selected>💸 Chi tiêu</option>
+            <option value="income">💰 Thu nhập</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="add-group-name" class="form-label">Tên nhóm chính <span class="required-star">*</span></label>
+          <input type="text" id="add-group-name" class="form-control" placeholder="Ví dụ: Đầu tư, Dự phòng..." required maxlength="50">
+        </div>
+        <div class="form-group">
+          <label for="add-group-icon" class="form-label">Biểu tượng (Emoji)</label>
+          <input type="text" id="add-group-icon" class="form-control" placeholder="📊" maxlength="5" value="📁">
+        </div>
+        <div class="modal-footer form-actions">
+          <button type="button" class="btn btn-secondary" data-close-modal="add-group">Hủy</button>
+          <button type="submit" id="btn-save-group" class="btn btn-primary">Lưu Nhóm Mới</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Add Custom Subcategory -->
+  <div id="modal-add-cat" class="modal-backdrop" hidden aria-hidden="true">
+    <div class="modal-dialog card" role="dialog" aria-labelledby="add-cat-modal-title">
+      <div class="modal-header">
+        <h3 id="add-cat-modal-title" class="modal-title">Thêm Hạng Mục Con Mới</h3>
+        <button type="button" class="modal-close-btn" data-close-modal="add-cat" aria-label="Đóng">&times;</button>
+      </div>
+      <form id="form-add-cat" class="modal-body transaction-form">
+        <div class="form-group">
+          <label for="add-cat-type" class="form-label">Loại giao dịch</label>
+          <select id="add-cat-type" class="form-control" required>
+            <option value="expense" selected>💸 Chi tiêu</option>
+            <option value="income">💰 Thu nhập</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="add-cat-group" class="form-label">Nhóm chính thuộc về <span class="required-star">*</span></label>
+          <select id="add-cat-group" class="form-control" required></select>
+        </div>
+        <div class="form-group">
+          <label for="add-cat-name" class="form-label">Tên hạng mục con <span class="required-star">*</span></label>
+          <input type="text" id="add-cat-name" class="form-control" placeholder="Ví dụ: Trà sữa, Bất động sản..." required maxlength="50">
+        </div>
+        <div class="form-group">
+          <label for="add-cat-icon" class="form-label">Biểu tượng (Emoji)</label>
+          <input type="text" id="add-cat-icon" class="form-control" placeholder="✨" maxlength="5" value="✨">
+        </div>
+        <div class="modal-footer form-actions">
+          <button type="button" class="btn btn-secondary" data-close-modal="add-cat">Hủy</button>
+          <button type="submit" id="btn-save-cat" class="btn btn-primary">Lưu Hạng Mục</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Global Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Application Scripts -->
+  <script src="js/db.js"></script>
+  <script src="js/categories.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
