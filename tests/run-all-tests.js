@@ -10,6 +10,7 @@ const { runTier3Tests } = require('./tier3_pairwise.test');
 const { runTier4Tests } = require('./tier4_scenarios.test');
 const { runM3VerificationTests } = require('./m3_verification.test');
 const { run3TierCategoryTests } = require('./3tier_category_hierarchy.test');
+const { runDeletionSyncTests } = require('./deletion_sync.test');
 
 async function main() {
   const projectRoot = path.resolve(__dirname, '..');
@@ -145,6 +146,27 @@ async function main() {
     }
   });
   console.log(`-> 3-Tier Category Summary: ${cat3tPassed}/${cat3tResults.length} passed.\n`);
+
+  // --------------------------------------------------------------------------
+  // BIDIRECTIONAL DELETION SYNC: Verification Suite (3 Tests)
+  // --------------------------------------------------------------------------
+  console.log('>>> [DELETION SYNC] Bidirectional Deletion Sync Verification...');
+  const delSyncResults = await runDeletionSyncTests(projectRoot);
+  let delSyncPassed = 0;
+  delSyncResults.forEach(r => {
+    totalTests++;
+    if (r.passed) {
+      delSyncPassed++;
+      totalPassed++;
+      console.log(`  [PASS] ${r.id}: ${r.title} (${r.duration}ms)`);
+    } else {
+      totalFailed++;
+      console.log(`  [FAIL] ${r.id}: ${r.title} (${r.duration}ms)`);
+      console.log(`         Error: ${r.error ? r.error.message : 'Unknown error'}`);
+    }
+  });
+  console.log(`-> Deletion Sync Summary: ${delSyncPassed}/${delSyncResults.length} passed.\n`);
+
   const durationMs = Date.now() - startTime;
   console.log('================================================================');
   console.log(' FINAL TEST SUITE RESULTS SUMMARY');
@@ -155,6 +177,7 @@ async function main() {
   console.log(`Tier 4 (Real-World Scenarios):           ${tier4Passed} / ${tier4Results.length} passed`);
   console.log(`Milestone M3 Verification:               ${m3Passed} / ${m3Results.length} passed`);
   console.log(`3-Tier Category Hierarchy:               ${cat3tPassed} / ${cat3tResults.length} passed`);
+  console.log(`Bidirectional Deletion Sync:             ${delSyncPassed} / ${delSyncResults.length} passed`);
   console.log('----------------------------------------------------------------');
   console.log(`TOTAL TEST CASES:                        ${totalTests}`);
   console.log(`TOTAL PASSED:                            ${totalPassed}`);

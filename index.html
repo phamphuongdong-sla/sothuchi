@@ -28,33 +28,30 @@
 </head>
 <body>
   <div id="app-root" class="app-layout">
-    <!-- Header -->
+    <!-- Minimalist Header -->
     <header id="app-header" class="app-header">
       <div class="header-brand">
         <span class="brand-icon-wrapper" aria-hidden="true">
-          <img src="icons/logo.svg" alt="Sổ Thu Chi" class="brand-icon-img" width="32" height="32">
+          <img src="icons/logo.svg" alt="Sổ Thu Chi" class="brand-icon-img" width="30" height="30">
         </span>
-        <h1 class="app-title">Sổ Thu Chi</h1>
-      </div>
-      <div class="header-center">
-        <h2 id="view-title" class="view-title">Giao dịch</h2>
+        <span class="app-title">Sổ Thu Chi</span>
       </div>
       <div class="header-actions">
-        <!-- User Account Badge -->
-        <div id="header-user-badge" class="user-badge" title="Tài khoản cá nhân" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.65rem; background: rgba(79, 70, 229, 0.1); border-radius: 20px; font-size: 0.85rem; font-weight: 500; color: var(--text-primary);">
-          <span>👨‍💼</span>
-          <span id="user-name-text">Phạm Phương Đông</span>
-          <button type="button" data-action="logout" title="Đăng xuất" style="background: none; border: none; cursor: pointer; padding: 0 0 0 0.25rem; opacity: 0.8; font-size: 0.9rem;" onclick="if(window.Auth) window.Auth.logout();">🚪</button>
-        </div>
         <!-- Sync Status Indicator -->
-        <div id="sync-status" class="sync-status status-offline" title="Trạng thái đồng bộ">
+        <div id="sync-status" class="sync-status status-offline" title="Trạng thái đồng bộ Google Sheets">
           <span class="status-dot"></span>
           <span class="status-text">Ngoại tuyến</span>
         </div>
         <!-- Theme Toggle Button -->
-        <button id="theme-toggle" class="icon-btn" aria-label="Đổi giao diện Dark/Light Mode" type="button">
+        <button id="theme-toggle" class="icon-btn" aria-label="Đổi giao diện Dark/Light Mode" type="button" title="Giao diện Sáng/Tối">
           <span class="theme-icon" aria-hidden="true">🌙</span>
         </button>
+        <!-- User Avatar & Quick Logout -->
+        <div id="header-user-badge" class="user-avatar-badge">
+          <button type="button" class="btn-avatar-profile" data-action="logout" title="Tài khoản Phạm Phương Đông (Bấm để đăng xuất)" onclick="if(window.Auth) window.Auth.logout();">
+            <span class="avatar-emoji">👨‍💼</span>
+          </button>
+        </div>
       </div>
     </header>
 

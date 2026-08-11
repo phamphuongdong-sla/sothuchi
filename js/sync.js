@@ -133,7 +133,7 @@
         return { success: false, reason: 'DB module not available' };
       }
 
-      const allTxs = db.getTransactions();
+      const allTxs = db.getTransactions({ includeDeleted: true });
       const pendingTxs = allTxs.filter(t => t.sync_status && t.sync_status !== 'synced');
 
       if (pendingTxs.length === 0) {
@@ -166,7 +166,7 @@
           if (jsonGet.status === 'success') {
             const syncedIds = jsonGet.synced_ids || payloadTransactions.map(t => t.id);
 
-            const updatedTxs = db.getTransactions().map(t => {
+            const updatedTxs = db.getTransactions({ includeDeleted: true }).map(t => {
               if (syncedIds.includes(t.id)) {
                 if (t.sync_status === 'pending_delete') {
                   return null;
@@ -204,7 +204,7 @@
           const syncedIds = json.synced_ids || payloadTransactions.map(t => t.id);
 
           // Update local DB items to synced
-          const updatedTxs = db.getTransactions().map(t => {
+          const updatedTxs = db.getTransactions({ includeDeleted: true }).map(t => {
             if (syncedIds.includes(t.id)) {
               if (t.sync_status === 'pending_delete') {
                 return null; // Permanently remove soft-deleted item after remote sync ACK
@@ -269,9 +269,20 @@
         const json = await res.json();
         if (json.status === 'success' && Array.isArray(json.transactions)) {
           const remoteTxs = json.transactions;
-          const localTxs = db.getTransactions();
+          const localTxs = db.getTransactions({ includeDeleted: true });
           const localMap = new Map(localTxs.map(t => [t.id, t]));
+          const remoteIdSet = new Set(remoteTxs.map(r => String(r.id)));
 
+          // 1. Process local synced or pending_delete items missing from remote (deleted on Sheets)
+          localTxs.forEach(local => {
+            if (local.sync_status === 'synced' && !remoteIdSet.has(String(local.id))) {
+              localMap.delete(local.id);
+            } else if (local.sync_status === 'pending_delete' && !remoteIdSet.has(String(local.id))) {
+              localMap.delete(local.id);
+            }
+          });
+
+          // 2. Merge remote items using Last-Write-Wins (LWW)
           remoteTxs.forEach(remote => {
             const local = localMap.get(remote.id);
             if (!local) {
@@ -286,7 +297,7 @@
                 // Remote is strictly newer
                 localMap.set(remote.id, { ...remote, sync_status: 'synced' });
               } else if (remoteTime === localTime) {
-                // Equal timestamp tie-breaker: Local update takes precedence on tie
+                // Equal timestamp tie-breaker: Local update takes precedence on tie if synced
                 if (local.sync_status === 'synced') {
                   localMap.set(remote.id, { ...remote, sync_status: 'synced' });
                 }
@@ -349,22 +360,30 @@
       if (!el) return;
 
       el.className = 'sync-status status-' + state;
-      switch (state) {
-        case 'syncing':
-          el.textContent = '🔄 Đang đồng bộ...';
-          break;
-        case 'success':
-          el.textContent = '✅ Đã đồng bộ';
-          break;
-        case 'error':
-          el.textContent = '⚠️ Lỗi đồng bộ';
-          break;
-        case 'offline':
-          el.textContent = '📡 Ngoại tuyến';
-          break;
-        default:
-          el.textContent = '🌐 Sẵn sàng';
-          break;
+
+      const titleMap = {
+        syncing: '🔄 Đang đồng bộ với Google Sheets...',
+        success: '✅ Đã đồng bộ thành công',
+        error: '⚠️ Lỗi đồng bộ',
+        offline: '📡 Ngoại tuyến (Offline)',
+        idle: '🌐 Sẵn sàng đồng bộ'
+      };
+
+      const textMap = {
+        syncing: 'Đang đồng bộ...',
+        success: 'Đã đồng bộ',
+        error: 'Lỗi đồng bộ',
+        offline: 'Ngoại tuyến',
+        idle: 'Sẵn sàng'
+      };
+
+      el.setAttribute('title', titleMap[state] || 'Trạng thái đồng bộ');
+
+      const textNode = el.querySelector('.status-text');
+      if (textNode) {
+        textNode.textContent = textMap[state] || 'Sẵn sàng';
+      } else {
+        el.innerHTML = `<span class="status-dot"></span><span class="status-text">${textMap[state] || 'Sẵn sàng'}</span>`;
       }
     }
 
