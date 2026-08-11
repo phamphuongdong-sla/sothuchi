@@ -1,19 +1,18 @@
 /* ==========================================================================
-   Sổ Thu Chi Cá Nhân - Authentication & Role Permissions System (js/auth.js)
-   Supports login with email phamphuongdong@gmail.com, password/PIN change,
-   session persistence, user profile badge, and Role-Based Access Control (RBAC).
+   Sổ Thu Chi Cá Nhân - Authentication & Role Permissions (js/auth.js)
    ========================================================================== */
 
 (function (global) {
   'use strict';
 
   const AUTH_KEY = 'stc_auth_user';
+
   const DEFAULT_USER = {
     email: 'phamphuongdong@gmail.com',
     name: 'Phạm Phương Đông',
     avatar: '👨‍💼',
-    pin: '123456', // default PIN / password
-    role: 'admin', // 'admin', 'member', 'viewer'
+    pin: '123456',
+    role: 'admin',
     roleName: 'Quản trị viên (Admin)',
     isLoggedIn: false
   };
@@ -27,28 +26,28 @@
   class AuthModule {
     constructor() {
       this.currentUser = null;
-      this.init();
+      this._init();
     }
 
-    init() {
-      this.currentUser = this.getStoredUser();
-      this.attachEventListeners();
+    _init() {
+      this.currentUser = this._loadUser();
+      this._attachListeners();
+      // Initial UI update after DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => this.updateUI());
+      } else {
+        this.updateUI();
+      }
     }
 
-    getStoredUser() {
+    _loadUser() {
       try {
-        const storage = global.localStorage || (global.window && global.window.localStorage);
-        if (storage) {
-          const raw = storage.getItem(AUTH_KEY);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed && parsed.email) {
-              return {
-                ...DEFAULT_USER,
-                ...parsed,
-                role: parsed.role || 'admin'
-              };
-            }
+        const storage = global.localStorage;
+        const raw = storage?.getItem(AUTH_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.email) {
+            return { ...DEFAULT_USER, ...parsed, role: parsed.role || 'admin' };
           }
         }
       } catch (e) {
@@ -57,57 +56,46 @@
       return { ...DEFAULT_USER, isLoggedIn: true };
     }
 
-    saveUser(user) {
+    _saveUser(user) {
       this.currentUser = user;
       try {
-        const storage = global.localStorage || (global.window && global.window.localStorage);
-        if (storage) {
-          storage.setItem(AUTH_KEY, JSON.stringify(user));
-        }
+        global.localStorage?.setItem(AUTH_KEY, JSON.stringify(user));
       } catch (e) {
         console.error('[Auth] Save user session failed:', e);
       }
-
       this.updateUI();
-
-      if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
-        try {
-          window.dispatchEvent(new CustomEvent('authchanged', { detail: { user } }));
-        } catch (e) {}
-      }
+      try {
+        window.dispatchEvent(new CustomEvent('authchanged', { detail: { user } }));
+      } catch (_) {}
     }
 
     login(email, pin) {
       const inputEmail = String(email || '').trim().toLowerCase();
       const inputPin = String(pin || '').trim();
 
-      if (!inputEmail) {
-        throw new Error('Vui lòng nhập Email đăng nhập');
-      }
+      if (!inputEmail) throw new Error('Vui lòng nhập Email đăng nhập');
+      if (!inputPin) throw new Error('Vui lòng nhập Mật khẩu / Mã PIN');
 
-      if (!inputPin) {
-        throw new Error('Vui lòng nhập Mật khẩu / Mã PIN (Không được để trống)');
-      }
-
-      const stored = this.getStoredUser();
+      const stored = this._loadUser();
       if (stored.pin && stored.pin !== inputPin) {
         throw new Error('Mật khẩu / Mã PIN không chính xác!');
       }
 
-      const displayName = inputEmail.includes('phamphuongdong') ? 'Phạm Phương Đông' : inputEmail.split('@')[0];
+      const displayName = inputEmail.includes('phamphuongdong')
+        ? 'Phạm Phương Đông'
+        : inputEmail.split('@')[0];
 
       const user = {
         ...stored,
         email: inputEmail,
         name: displayName,
-        avatar: '👨‍💼',
         pin: stored.pin || inputPin,
         role: stored.role || 'admin',
         isLoggedIn: true,
         loginTime: new Date().toISOString()
       };
 
-      this.saveUser(user);
+      this._saveUser(user);
       return user;
     }
 
@@ -117,68 +105,40 @@
       const inputNew = String(newPin || '').trim();
       const inputConfirm = String(confirmPin || '').trim();
 
-      if (!inputOld) {
-        throw new Error('Vui lòng nhập Mật khẩu hiện tại');
-      }
-      if (current.pin && inputOld !== current.pin) {
-        throw new Error('Mật khẩu hiện tại không đúng!');
-      }
-      if (!inputNew || inputNew.length < 4) {
-        throw new Error('Mật khẩu mới phải có ít nhất 4 ký tự!');
-      }
-      if (inputNew !== inputConfirm) {
-        throw new Error('Xác nhận mật khẩu mới không trùng khớp!');
-      }
+      if (!inputOld) throw new Error('Vui lòng nhập Mật khẩu hiện tại');
+      if (current.pin && inputOld !== current.pin) throw new Error('Mật khẩu hiện tại không đúng!');
+      if (!inputNew || inputNew.length < 4) throw new Error('Mật khẩu mới phải có ít nhất 4 ký tự!');
+      if (inputNew !== inputConfirm) throw new Error('Xác nhận mật khẩu mới không trùng khớp!');
 
-      const updatedUser = {
-        ...current,
-        pin: inputNew
-      };
-
-      this.saveUser(updatedUser);
-      return updatedUser;
+      const updated = { ...current, pin: inputNew };
+      this._saveUser(updated);
+      return updated;
     }
 
     changeRole(newRole) {
       const validRoles = ['admin', 'member', 'viewer'];
-      const targetRole = validRoles.includes(newRole) ? newRole : 'admin';
-      const current = this.getUser();
-
-      const updatedUser = {
-        ...current,
-        role: targetRole,
-        roleName: ROLE_NAMES[targetRole]
-      };
-
-      this.saveUser(updatedUser);
-      return updatedUser;
+      const role = validRoles.includes(newRole) ? newRole : 'admin';
+      const updated = { ...this.getUser(), role, roleName: ROLE_NAMES[role] };
+      this._saveUser(updated);
+      return updated;
     }
 
     hasPermission(action) {
-      const user = this.getUser();
-      const role = user.role || 'admin';
-
+      const role = this.getUser().role || 'admin';
       if (role === 'admin') return true;
-      if (role === 'member') {
-        return ['addTransaction', 'editTransaction', 'deleteTransaction', 'viewReports'].includes(action);
-      }
-      if (role === 'viewer') {
-        return ['viewReports', 'viewTransactions'].includes(action);
-      }
+      if (role === 'member') return ['addTransaction', 'editTransaction', 'deleteTransaction', 'viewReports'].includes(action);
+      if (role === 'viewer') return ['viewReports', 'viewTransactions'].includes(action);
       return true;
     }
 
     logout() {
-      const user = {
-        ...this.getUser(),
-        isLoggedIn: false
-      };
-      this.saveUser(user);
+      const user = { ...this.getUser(), isLoggedIn: false };
+      this._saveUser(user);
       return user;
     }
 
     isLoggedIn() {
-      return !!(this.currentUser && this.currentUser.isLoggedIn);
+      return !!(this.currentUser?.isLoggedIn);
     }
 
     getUser() {
@@ -187,39 +147,30 @@
 
     updateUI() {
       if (typeof document === 'undefined') return;
-
       const user = this.getUser();
 
-      // Header User Badge
-      const userEmailText = document.getElementById('user-email-text');
-      const userNameText = document.getElementById('user-name-text');
-      const userRoleBadge = document.getElementById('user-role-badge');
+      const el = id => document.getElementById(id);
 
+      const userEmailText = el('user-email-text');
+      const userNameText = el('user-name-text');
+      const userRoleBadge = el('user-role-badge');
       if (userEmailText) userEmailText.textContent = user.email;
       if (userNameText) userNameText.textContent = user.name;
-      if (userRoleBadge) {
-        userRoleBadge.textContent = ROLE_NAMES[user.role] || ROLE_NAMES.admin;
-      }
+      if (userRoleBadge) userRoleBadge.textContent = ROLE_NAMES[user.role] || ROLE_NAMES.admin;
 
-      // Settings User Display
-      const settingsUserEl = document.getElementById('settings-user-info');
-      if (settingsUserEl) {
-        settingsUserEl.textContent = `${user.name} (${user.email})`;
-      }
+      const settingsUserEl = el('settings-user-info');
+      if (settingsUserEl) settingsUserEl.textContent = `${user.name} (${user.email})`;
 
-      const roleSelect = document.getElementById('select-user-role');
-      if (roleSelect) {
-        roleSelect.value = user.role || 'admin';
-      }
+      const roleSelect = el('select-user-role');
+      if (roleSelect) roleSelect.value = user.role || 'admin';
 
-      // Login Modal Visibility
-      const loginModal = document.getElementById('modal-auth-login');
+      const loginModal = el('modal-auth-login');
       if (loginModal) {
         if (!user.isLoggedIn) {
           loginModal.removeAttribute('hidden');
           loginModal.setAttribute('aria-hidden', 'false');
           loginModal.style.display = 'flex';
-          const pinInput = document.getElementById('auth-pin-input');
+          const pinInput = el('auth-pin-input');
           if (pinInput) pinInput.value = '';
         } else {
           loginModal.setAttribute('hidden', 'true');
@@ -229,111 +180,82 @@
       }
     }
 
-    attachEventListeners() {
+    _attachListeners() {
       if (typeof document === 'undefined') return;
 
-      document.addEventListener('DOMContentLoaded', () => {
-        this.updateUI();
-      });
-
-      document.addEventListener('click', (e) => {
-        // Toggle Password Eye Icon
+      document.addEventListener('click', e => {
+        // Toggle password visibility
         const btnTogglePw = e.target.closest('#btn-toggle-auth-pw, .btn-toggle-pw');
         if (btnTogglePw) {
           e.preventDefault();
           const wrapper = btnTogglePw.closest('.pw-input-wrapper');
-          const input = wrapper ? wrapper.querySelector('input') : document.getElementById('auth-pin-input');
-          const eyeIcon = btnTogglePw.querySelector('.eye-icon');
+          const input = wrapper?.querySelector('input') || document.getElementById('auth-pin-input');
+          const icon = btnTogglePw.querySelector('.eye-icon');
           if (input) {
             const isPw = input.type === 'password';
             input.type = isPw ? 'text' : 'password';
-            if (eyeIcon) eyeIcon.textContent = isPw ? '🙈' : '👁️';
+            if (icon) icon.textContent = isPw ? '🙈' : '👁️';
           }
+          return;
         }
 
-        // Logout / Lock App Button
+        // Logout/Lock
         const btnLogout = e.target.closest('[data-action="logout"], #btn-logout, #btn-lock-app');
         if (btnLogout) {
           e.preventDefault();
           this.logout();
-          if (window.Toast) {
-            window.Toast.show('🔒 Đã khóa ứng dụng và đăng xuất', 'info');
-          }
+          window.Toast?.show('🔒 Đã khóa ứng dụng và đăng xuất', 'info');
         }
       });
 
-      // Submit Login Form
-      document.addEventListener('submit', (e) => {
-        const formLogin = e.target.closest('#form-auth-login');
-        if (formLogin) {
+      document.addEventListener('submit', e => {
+        // Login form
+        if (e.target.closest('#form-auth-login')) {
           e.preventDefault();
-          const emailInput = document.getElementById('auth-email-input');
-          const pinInput = document.getElementById('auth-pin-input');
-          const pinErrorEl = document.getElementById('auth-pin-error');
-
-          const email = emailInput ? emailInput.value : '';
-          const pin = pinInput ? pinInput.value : '';
-
-          if (pinErrorEl) pinErrorEl.textContent = '';
-
+          const email = document.getElementById('auth-email-input')?.value || '';
+          const pin = document.getElementById('auth-pin-input')?.value || '';
+          const errorEl = document.getElementById('auth-pin-error');
+          if (errorEl) errorEl.textContent = '';
           try {
             this.login(email, pin);
-            if (window.Toast) {
-              window.Toast.show(`✅ Chào mừng ${this.currentUser.name}!`, 'success');
-            }
+            window.Toast?.show(`✅ Chào mừng ${this.currentUser.name}!`, 'success');
           } catch (err) {
-            formLogin.classList.remove('shake-error');
-            // Trigger reflow to restart CSS animation
-            void formLogin.offsetWidth;
-            formLogin.classList.add('shake-error');
-
-            if (pinErrorEl) pinErrorEl.textContent = err.message;
-            if (pinInput) pinInput.focus();
-
-            if (window.Toast) {
-              window.Toast.show(`❌ ${err.message}`, 'error');
-            }
+            const form = e.target;
+            form.classList.remove('shake-error');
+            void form.offsetWidth;
+            form.classList.add('shake-error');
+            if (errorEl) errorEl.textContent = err.message;
+            document.getElementById('auth-pin-input')?.focus();
+            window.Toast?.show(`❌ ${err.message}`, 'error');
           }
+          return;
         }
 
-        // Submit Change Password Form
-        const formChangePw = e.target.closest('#form-change-password');
-        if (formChangePw) {
+        // Change password form
+        if (e.target.closest('#form-change-password')) {
           e.preventDefault();
-          const oldPwInput = document.getElementById('pw-old-input');
-          const newPwInput = document.getElementById('pw-new-input');
-          const confirmPwInput = document.getElementById('pw-confirm-input');
-
           try {
             this.changePassword(
-              oldPwInput ? oldPwInput.value : '',
-              newPwInput ? newPwInput.value : '',
-              confirmPwInput ? confirmPwInput.value : ''
+              document.getElementById('pw-old-input')?.value || '',
+              document.getElementById('pw-new-input')?.value || '',
+              document.getElementById('pw-confirm-input')?.value || ''
             );
-            if (oldPwInput) oldPwInput.value = '';
-            if (newPwInput) newPwInput.value = '';
-            if (confirmPwInput) confirmPwInput.value = '';
-
-            if (window.Toast) {
-              window.Toast.show('✅ Đã đổi mật khẩu thành công!', 'success');
-            }
+            ['pw-old-input', 'pw-new-input', 'pw-confirm-input'].forEach(id => {
+              const el = document.getElementById(id);
+              if (el) el.value = '';
+            });
+            window.Toast?.show('✅ Đã đổi mật khẩu thành công!', 'success');
           } catch (err) {
-            if (window.Toast) {
-              window.Toast.show(`❌ ${err.message}`, 'error');
-            }
+            window.Toast?.show(`❌ ${err.message}`, 'error');
           }
         }
       });
 
-      // Change Role Selector Listener
-      document.addEventListener('change', (e) => {
+      document.addEventListener('change', e => {
         const roleSelect = e.target.closest('#select-user-role');
         if (roleSelect) {
-          const newRole = roleSelect.value;
-          this.changeRole(newRole);
-          if (window.Toast) {
-            window.Toast.show(`✅ Đã cập nhật vai trò thành: ${ROLE_NAMES[newRole]}`, 'info');
-          }
+          this.changeRole(roleSelect.value);
+          window.Toast?.show(`✅ Đã cập nhật vai trò: ${ROLE_NAMES[roleSelect.value]}`, 'info');
         }
       });
     }
@@ -341,7 +263,6 @@
 
   const authInstance = new AuthModule();
   global.Auth = authInstance;
-  global.AuthModule = authInstance;
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = authInstance;

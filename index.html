@@ -37,8 +37,8 @@
         <span class="app-title">Sổ Thu Chi</span>
       </div>
       <div class="header-actions">
-        <!-- Hidden Sync Status Indicator for Contract Compatibility -->
-        <div id="sync-status" class="sync-status status-offline" title="Trạng thái đồng bộ Google Sheets" style="display: none;" hidden>
+        <!-- Sync Status Indicator (hidden by default) -->
+        <div id="sync-status" class="sync-status status-offline" title="Trạng thái đồng bộ Google Sheets" hidden>
           <span class="status-dot"></span>
           <span class="status-text">Ngoại tuyến</span>
         </div>
@@ -47,7 +47,7 @@
           <span class="theme-icon" aria-hidden="true">🌙</span>
         </button>
         <!-- Lock App Button -->
-        <button id="btn-lock-app" class="icon-btn" aria-label="Khóa ứng dụng" type="button" title="Khóa ứng dụng" data-action="logout" onclick="if(window.Auth) window.Auth.logout();">
+        <button id="btn-lock-app" class="icon-btn" aria-label="Khóa ứng dụng" type="button" title="Khóa ứng dụng" data-action="logout">
           <span class="lock-icon" aria-hidden="true">🔒</span>
         </button>
       </div>
@@ -355,21 +355,15 @@
             <h3 class="card-title">🟢 Trạng Thái Đồng Bộ Google Sheets</h3>
             <p class="card-subtitle">Ứng dụng đã tự động kết nối 2 chiều với Google Sheets cá nhân của bạn</p>
           </div>
-          <div class="auto-sync-status-box" style="padding: 1rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; margin: 1rem 0;">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <span style="font-size: 1.75rem;">⚡</span>
-              <div>
-                <strong style="color: var(--text-primary); font-size: 1rem;">Tự Động Đồng Bộ 2 Chiều Được Bật</strong>
-                <p style="margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--text-secondary);">Mọi giao dịch thu chi mới sẽ được tự động ghi trực tiếp vào Google Sheets khi có kết nối mạng.</p>
-              </div>
+          <div class="auto-sync-status-box">
+            <span class="auto-sync-icon">⚡</span>
+            <div>
+              <strong>Tự Động Đồng Bộ 2 Chiều Được Bật</strong>
+              <p>Mọi giao dịch thu chi mới sẽ được tự động ghi trực tiếp vào Google Sheets khi có kết nối mạng.</p>
             </div>
           </div>
-          <form id="settings-form" class="settings-form" style="display: none;">
-            <input type="hidden" id="gas-url-input" value="https://script.google.com/macros/s/AKfycbzI9y7gVMLLob2lNltvGyzH5_ZA-XEav5MC-037FI7JzuWS38iQ6dTzitphHBkhC5HiQQ/exec">
-            <input type="checkbox" id="auto-sync-toggle" checked style="display: none;">
-          </form>
-          <div class="form-actions" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            <button type="button" id="btn-manual-sync" class="btn btn-primary" onclick="if(window.SyncEngine) window.SyncEngine.sync();">
+          <div class="form-actions sync-actions">
+            <button type="button" id="btn-manual-sync" class="btn btn-primary">
               🔄 Đồng Bộ Ngay (Push & Pull)
             </button>
             <button type="button" id="btn-test-connection" class="btn btn-secondary">
@@ -411,7 +405,7 @@
             <h3 class="card-title">🛡️ Phân Quyền Truy Cập Tài Khoản</h3>
             <p class="card-subtitle">Thiết lập quyền hạn thao tác cho người dùng trên ứng dụng Sổ Thu Chi</p>
           </div>
-          <div class="form-group" style="margin-top: 1rem;">
+          <div class="form-group form-group--spaced">
             <label for="select-user-role" class="form-label">Vai trò tài khoản hiện tại</label>
             <select id="select-user-role" class="form-control">
               <option value="admin">👑 Quản trị viên (Admin) - Toàn quyền xem, nhập, sửa, xóa & cài đặt</option>
@@ -426,36 +420,30 @@
             <h3 class="card-title">📱 Hướng Dẫn Cài Đặt PWA Lên Điện Thoại</h3>
             <p class="card-subtitle">Cài đặt ứng dụng dùng trực tiếp trên màn hình chính mà không cần App Store / CH Play</p>
           </div>
-          <div class="pwa-guide-content" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
-            <div class="guide-item" style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem; background: rgba(79, 70, 229, 0.05); border-radius: 8px;">
-              <span style="font-size: 1.5rem;">🍎</span>
+          <div class="pwa-guide-content">
+            <div class="guide-item guide-item--ios">
+              <span class="guide-icon">🍎</span>
               <div>
-                <strong style="color: var(--text-primary);">Trên iPhone (iOS Safari):</strong>
-                <p style="margin: 0.25rem 0 0; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.4;">
-                  1. Mở đường dẫn trang web bằng <strong>Safari</strong>.<br>
-                  2. Nhấn nút <strong>Chia sẻ</strong> (hình vuông có mũi tên chỉ lên ở đáy màn hình).<br>
-                  3. Chọn <strong>"Thêm vào MH chính" (Add to Home Screen)</strong>.
-                </p>
+                <strong>Trên iPhone (iOS Safari):</strong>
+                <p>1. Mở đường dẫn trang web bằng <strong>Safari</strong>.<br>
+                   2. Nhấn nút <strong>Chia sẻ</strong> (hình vuông có mũi tên chỉ lên ở đáy màn hình).<br>
+                   3. Chọn <strong>"Thêm vào MH chính" (Add to Home Screen)</strong>.</p>
               </div>
             </div>
-            <div class="guide-item" style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem; background: rgba(16, 185, 129, 0.05); border-radius: 8px;">
-              <span style="font-size: 1.5rem;">🤖</span>
+            <div class="guide-item guide-item--android">
+              <span class="guide-icon">🤖</span>
               <div>
-                <strong style="color: var(--text-primary);">Trên Android (Google Chrome):</strong>
-                <p style="margin: 0.25rem 0 0; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.4;">
-                  1. Mở trang web bằng <strong>Chrome</strong>.<br>
-                  2. Nhấn vào dấu <strong>3 chấm (⋮)</strong> ở góc trên cùng bên phải.<br>
-                  3. Chọn <strong>"Cài đặt ứng dụng"</strong> hoặc <strong>"Thêm vào màn hình chính"</strong>.
-                </p>
+                <strong>Trên Android (Google Chrome):</strong>
+                <p>1. Mở trang web bằng <strong>Chrome</strong>.<br>
+                   2. Nhấn vào dấu <strong>3 chấm (⋮)</strong> ở góc trên cùng bên phải.<br>
+                   3. Chọn <strong>"Cài đặt ứng dụng"</strong> hoặc <strong>"Thêm vào màn hình chính"</strong>.</p>
               </div>
             </div>
-            <div class="guide-item" style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem; background: rgba(245, 158, 11, 0.05); border-radius: 8px;">
-              <span style="font-size: 1.5rem;">💻</span>
+            <div class="guide-item guide-item--desktop">
+              <span class="guide-icon">💻</span>
               <div>
-                <strong style="color: var(--text-primary);">Lưu ý chạy trên máy tính local:</strong>
-                <p style="margin: 0.25rem 0 0; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.4;">
-                  Trình duyệt chặn Service Worker trên giao thức <code>file://</code>. Cần mở ứng dụng qua Local Web Server (ví dụ: <code>http://localhost:8000</code>) hoặc đưa lên web host (HTTPS) để nút PWA tự bật lên.
-                </p>
+                <strong>Lưu ý chạy trên máy tính local:</strong>
+                <p>Trình duyệt chặn Service Worker trên giao thức <code>file://</code>. Cần mở qua Local Web Server (ví dụ: <code>http://localhost:8000</code>) hoặc đưa lên HTTPS để bật PWA.</p>
               </div>
             </div>
           </div>
@@ -463,17 +451,17 @@
 
         <!-- 3-Tier Category Management Card -->
         <div class="card settings-card mt-4">
-          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div class="card-header card-header--spaced">
             <div>
               <h3 class="card-title">📁 Quản Lý Hạng Mục 3 Tầng</h3>
               <p class="card-subtitle">15 Nhóm chính & ~92 Hạng mục con - Cho phép tự thêm nhóm và hạng mục mới</p>
             </div>
-            <div style="display: flex; gap: 0.5rem;">
+            <div class="card-header-actions">
               <button type="button" id="btn-open-add-group" class="btn btn-secondary btn-sm">➕ Thêm Nhóm Chính</button>
               <button type="button" id="btn-open-add-cat" class="btn btn-primary btn-sm">➕ Thêm Hạng Mục Con</button>
             </div>
           </div>
-          <div id="category-manager-tree" class="category-manager-tree" style="margin-top: 1rem;"></div>
+          <div id="category-manager-tree" class="category-manager-tree"></div>
         </div>
       </section>
     </main>
@@ -621,7 +609,7 @@
   </div>
 
   <!-- Modal: Authentication / Login -->
-  <div id="modal-auth-login" class="modal-backdrop auth-glass-backdrop" hidden aria-hidden="true" style="display: none; z-index: 9999;">
+  <div id="modal-auth-login" class="modal-backdrop auth-glass-backdrop" hidden aria-hidden="true">
     <div class="modal-dialog card auth-modal-card" role="dialog" aria-labelledby="auth-login-title">
       <div class="auth-modal-header">
         <div class="auth-lock-icon-badge">

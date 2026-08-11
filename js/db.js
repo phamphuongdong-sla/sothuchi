@@ -13,8 +13,7 @@
   };
 
   function generateId(prefix) {
-    prefix = prefix || 'tx';
-    return prefix + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    return (prefix || 'tx') + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   }
 
   function normalizeTransaction(tx) {
@@ -22,56 +21,42 @@
     const now = new Date().toISOString();
     const created = tx.created_at || tx.createdAt || now;
     const updated = tx.updated_at || tx.updatedAt || created;
-
-    const typeVal = tx.type === 'income' ? 'income' : 'expense';
-    const amountVal = Number(tx.amount);
-    const categoryVal = String(
-      tx.category !== undefined && tx.category !== null && tx.category !== ''
+    const type = tx.type === 'income' ? 'income' : 'expense';
+    const amount = Number(tx.amount);
+    const category = String(
+      tx.category != null && tx.category !== ''
         ? tx.category
-        : (typeVal === 'income' ? 'Lương' : 'Ăn uống')
+        : (type === 'income' ? 'Lương' : 'Ăn uống')
     ).trim();
-    const noteVal = tx.note !== undefined && tx.note !== null ? String(tx.note) : '';
-    const dateVal = tx.date ? String(tx.date) : now.split('T')[0];
-    const syncStatusVal = tx.sync_status || 'pending_add';
-    const idVal = String(tx.id || generateId('tx'));
 
     return {
-      id: idVal,
-      date: dateVal,
-      type: typeVal,
-      category: categoryVal,
-      amount: isNaN(amountVal) ? 0 : amountVal,
-      note: noteVal,
+      id: String(tx.id || generateId('tx')),
+      date: tx.date ? String(tx.date) : now.split('T')[0],
+      type,
+      category,
+      amount: isNaN(amount) ? 0 : amount,
+      note: tx.note != null ? String(tx.note) : '',
       created_at: created,
-      createdAt: created,
       updated_at: updated,
-      updatedAt: updated,
-      sync_status: syncStatusVal
+      sync_status: tx.sync_status || 'pending_add'
     };
   }
 
   class DatabaseManager {
     constructor(customStorage) {
-      this._customStorage = customStorage;
+      this._storage = customStorage || null;
     }
 
     get storage() {
-      if (this._customStorage) return this._customStorage;
-      if (typeof localStorage !== 'undefined') return localStorage;
-      return null;
+      return this._storage || (typeof localStorage !== 'undefined' ? localStorage : null);
     }
 
     _getItem(key, altKey) {
       const s = this.storage;
       if (!s) return null;
       try {
-        const val = s.getItem(key);
-        if (val !== null && val !== undefined) return val;
-        if (altKey) return s.getItem(altKey);
-        return null;
-      } catch (e) {
-        return null;
-      }
+        return s.getItem(key) ?? (altKey ? s.getItem(altKey) : null);
+      } catch (_) { return null; }
     }
 
     _setItem(key, value, altKey) {
@@ -81,213 +66,150 @@
         s.setItem(key, value);
         if (altKey) s.setItem(altKey, value);
       } catch (e) {
-        if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.message?.includes('QuotaExceededError'))) {
-          throw new Error('Dung lượng lưu trữ trình duyệt đã đầy (LocalStorage Quota Exceeded)');
+        if (e?.name === 'QuotaExceededError' || e?.code === 22) {
+          throw new Error('Dung lượng lưu trữ trình duyệt đã đầy');
         }
         throw e;
       }
     }
 
-    getTransactions(filter = {}) {
-      const raw = this._getItem(KEYS.TX, KEYS.TX_ALT);
-      if (!raw) return [];
-
-      let list = [];
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          list = parsed.map(normalizeTransaction).filter(Boolean);
-        }
-      } catch (e) {
-        console.warn('[DB] Corrupted transactions JSON detected in LocalStorage, falling back to empty array.', e);
-        return [];
-      }
-
-      // Filter out deleted items unless includeDeleted is explicitly true
-      if (!filter.includeDeleted) {
-        list = list.filter(t => t.sync_status !== 'pending_delete');
-      }
-
-      // Filter by type
-      if (filter.type && filter.type !== 'all') {
-        list = list.filter(t => t.type === filter.type);
-      }
-
-      // Filter by category
-      if (filter.category && filter.category !== 'all') {
-        list = list.filter(t => t.category === filter.category);
-      }
-
-      // Filter by startDate
-      if (filter.startDate) {
-        list = list.filter(t => t.date >= filter.startDate);
-      }
-
-      // Filter by endDate
-      if (filter.endDate) {
-        list = list.filter(t => t.date <= filter.endDate);
-      }
-
-      // Filter by keyword or query search string
-      const searchKeyword = (filter.keyword || filter.query || '').trim().toLowerCase();
-      if (searchKeyword) {
-        list = list.filter(t => {
-          const noteMatch = t.note && t.note.toLowerCase().includes(searchKeyword);
-          const catMatch = t.category && t.category.toLowerCase().includes(searchKeyword);
-          return noteMatch || catMatch;
-        });
-      }
-
-      // Filter by sync_status
-      if (filter.sync_status) {
-        list = list.filter(t => t.sync_status === filter.sync_status);
-      }
-
-      // Sort by date desc, created_at desc
-      list.sort((a, b) => {
-        if (b.date !== a.date) {
-          return b.date.localeCompare(a.date);
-        }
-        return (b.created_at || '').localeCompare(a.created_at || '');
-      });
-
-      return list;
-    }
-
-    _getAllStoredTransactionsRaw() {
+    _loadAll() {
       const raw = this._getItem(KEYS.TX, KEYS.TX_ALT);
       if (!raw) return [];
       try {
         const parsed = JSON.parse(raw);
         return Array.isArray(parsed) ? parsed.map(normalizeTransaction).filter(Boolean) : [];
       } catch (e) {
+        console.warn('[DB] Corrupted transactions JSON, falling back to empty array.', e);
         return [];
       }
+    }
+
+    getTransactions(filter = {}) {
+      let list = this._loadAll();
+
+      if (!filter.includeDeleted) {
+        list = list.filter(t => t.sync_status !== 'pending_delete');
+      }
+      if (filter.type && filter.type !== 'all') {
+        list = list.filter(t => t.type === filter.type);
+      }
+      if (filter.category && filter.category !== 'all') {
+        list = list.filter(t => t.category === filter.category);
+      }
+      if (filter.startDate) {
+        list = list.filter(t => t.date >= filter.startDate);
+      }
+      if (filter.endDate) {
+        list = list.filter(t => t.date <= filter.endDate);
+      }
+      if (filter.sync_status) {
+        list = list.filter(t => t.sync_status === filter.sync_status);
+      }
+
+      const keyword = (filter.keyword || filter.query || '').trim().toLowerCase();
+      if (keyword) {
+        list = list.filter(t =>
+          t.note?.toLowerCase().includes(keyword) ||
+          t.category?.toLowerCase().includes(keyword)
+        );
+      }
+
+      list.sort((a, b) =>
+        b.date !== a.date
+          ? b.date.localeCompare(a.date)
+          : (b.created_at || '').localeCompare(a.created_at || '')
+      );
+
+      return list;
     }
 
     saveTransactions(txs, options = {}) {
       const normalized = (txs || []).map(normalizeTransaction).filter(Boolean);
       this._setItem(KEYS.TX, JSON.stringify(normalized), KEYS.TX_ALT);
 
-      // Auto-trigger SyncEngine pushSync immediately after saving local DB unless skipAutoPush is requested
-      if (!options.skipAutoPush && typeof window !== 'undefined' && !window.__isTestEnv && window.location && window.location.protocol && window.location.protocol.startsWith('http')) {
-        const syncInst = window.SyncEngine || window.SyncManager;
-        if (syncInst && typeof syncInst.pushSync === 'function') {
-          try {
-            const timer = setTimeout(() => {
-              try {
-                syncInst.pushSync().catch(() => {});
-              } catch (e) {}
-            }, 50);
-            if (timer && typeof timer.unref === 'function') timer.unref();
-          } catch (e) {}
+      if (!options.skipAutoPush && typeof window !== 'undefined' && !window.__isTestEnv &&
+          window.location?.protocol?.startsWith('http')) {
+        const sync = window.SyncEngine;
+        if (sync?.pushSync) {
+          setTimeout(() => sync.pushSync().catch(() => {}), 50);
         }
       }
     }
 
     addTransaction(data) {
-      if (!data || typeof data !== 'object') {
-        throw new Error('Dữ liệu giao dịch không hợp lệ');
-      }
+      if (!data || typeof data !== 'object') throw new Error('Dữ liệu giao dịch không hợp lệ');
+      const amount = Number(data.amount);
+      if (isNaN(amount) || amount <= 0) throw new Error('Số tiền phải là số dương hợp lệ');
 
-      const amountNum = Number(data.amount);
-      if (isNaN(amountNum) || amountNum <= 0) {
-        throw new Error('Số tiền phải là số dương hợp lệ');
-      }
-
-      const allTxs = this._getAllStoredTransactionsRaw();
       const now = new Date().toISOString();
-      const created = data.created_at || data.createdAt || now;
-      const updated = data.updated_at || data.updatedAt || now;
-
       const newTx = normalizeTransaction({
         id: data.id || generateId('tx'),
         date: data.date || now.split('T')[0],
         type: data.type === 'income' ? 'income' : 'expense',
         category: data.category || (data.type === 'income' ? 'Lương' : 'Ăn uống'),
-        amount: amountNum,
+        amount,
         note: data.note || '',
-        created_at: created,
-        createdAt: created,
-        updated_at: updated,
-        updatedAt: updated,
+        created_at: data.created_at || now,
+        updated_at: data.updated_at || now,
         sync_status: data.sync_status || 'pending_add'
       });
 
-      allTxs.push(newTx);
-      this.saveTransactions(allTxs);
+      const all = this._loadAll();
+      all.push(newTx);
+      this.saveTransactions(all);
       return newTx;
     }
 
     updateTransaction(id, data) {
-      if (!id) {
-        throw new Error('Không tìm thấy giao dịch');
-      }
+      if (!id) throw new Error('Không tìm thấy giao dịch');
+      const all = this._loadAll();
+      const idx = all.findIndex(t => t.id === id);
+      if (idx === -1) throw new Error('Không tìm thấy giao dịch');
 
-      const allTxs = this._getAllStoredTransactionsRaw();
-      const idx = allTxs.findIndex(t => t.id === id);
-      if (idx === -1) {
-        throw new Error('Không tìm thấy giao dịch');
-      }
-
-      const current = allTxs[idx];
-
-      let amountNum = current.amount;
+      const current = all[idx];
+      let amount = current.amount;
       if (data.amount !== undefined) {
-        amountNum = Number(data.amount);
-        if (isNaN(amountNum) || amountNum <= 0) {
-          throw new Error('Số tiền phải là số dương hợp lệ');
-        }
+        amount = Number(data.amount);
+        if (isNaN(amount) || amount <= 0) throw new Error('Số tiền phải là số dương hợp lệ');
       }
 
       const now = new Date().toISOString();
-      let nextSyncStatus = data.sync_status || current.sync_status;
-      if (!data.sync_status && current.sync_status === 'synced') {
-        nextSyncStatus = 'pending_update';
-      }
+      const syncStatus = data.sync_status ||
+        (current.sync_status === 'synced' ? 'pending_update' : current.sync_status);
 
-      const updatedTx = normalizeTransaction({
-        ...current,
-        ...data,
-        amount: amountNum,
+      all[idx] = normalizeTransaction({
+        ...current, ...data,
+        amount,
         updated_at: now,
-        updatedAt: now,
-        sync_status: nextSyncStatus
+        sync_status: syncStatus
       });
 
-      allTxs[idx] = updatedTx;
-      this.saveTransactions(allTxs);
-      return updatedTx;
+      this.saveTransactions(all);
+      return all[idx];
     }
 
     deleteTransaction(id) {
       if (!id) return false;
-
-      const allTxs = this._getAllStoredTransactionsRaw();
-      const idx = allTxs.findIndex(t => t.id === id);
+      const all = this._loadAll();
+      const idx = all.findIndex(t => t.id === id);
       if (idx === -1) return false;
 
-      const target = allTxs[idx];
+      const target = all[idx];
       if (target.sync_status === 'synced' || target.sync_status === 'pending_update') {
-        target.sync_status = 'pending_delete';
-        target.updated_at = new Date().toISOString();
-        target.updatedAt = target.updated_at;
-        allTxs[idx] = normalizeTransaction(target);
+        const now = new Date().toISOString();
+        all[idx] = normalizeTransaction({ ...target, sync_status: 'pending_delete', updated_at: now });
       } else {
-        allTxs.splice(idx, 1);
+        all.splice(idx, 1);
       }
 
-      this.saveTransactions(allTxs);
+      this.saveTransactions(all);
       return true;
     }
 
     getCategories(includeHidden) {
-      if (global.Categories && typeof global.Categories.getCategories === 'function') {
-        return global.Categories.getCategories(includeHidden !== false);
-      }
-      if (global.CategoryManager && typeof global.CategoryManager.getCategories === 'function') {
-        return global.CategoryManager.getCategories(includeHidden !== false);
-      }
+      const catMgr = global.Categories || global.CategoryManager;
+      if (catMgr?.getCategories) return catMgr.getCategories(includeHidden !== false);
 
       const raw = this._getItem(KEYS.CAT, KEYS.CAT_ALT);
       if (!raw) return [];
@@ -295,46 +217,31 @@
         const parsed = JSON.parse(raw);
         if (!Array.isArray(parsed)) return [];
         return includeHidden ? parsed : parsed.filter(c => !c.is_hidden && !c.isHidden);
-      } catch (e) {
-        return [];
-      }
+      } catch (_) { return []; }
     }
 
     saveCategories(cats) {
-      if (global.Categories && typeof global.Categories.saveToStorage === 'function') {
-        return global.Categories.saveToStorage(cats);
-      }
-      const json = JSON.stringify(cats || []);
-      this._setItem(KEYS.CAT, json, KEYS.CAT_ALT);
+      const catMgr = global.Categories || global.CategoryManager;
+      if (catMgr?.saveToStorage) return catMgr.saveToStorage(cats);
+      this._setItem(KEYS.CAT, JSON.stringify(cats || []), KEYS.CAT_ALT);
     }
 
     formatVND(amount) {
-      const num = Math.round(Number(amount) || 0);
-      return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' ₫';
+      return Math.round(Number(amount) || 0)
+        .toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' ₫';
     }
   }
 
   const dbInstance = new DatabaseManager();
 
-  // Attach formatting utility
-  function formatVND(amount) {
-    return dbInstance.formatVND(amount);
-  }
+  function formatVND(amount) { return dbInstance.formatVND(amount); }
 
+  // Exports
   global.DatabaseManager = DatabaseManager;
   global.DB = dbInstance;
   global.db = dbInstance;
   global.formatVND = formatVND;
 
-  if (typeof window !== 'undefined') {
-    window.DatabaseManager = DatabaseManager;
-    window.DB = dbInstance;
-    window.db = dbInstance;
-    window.formatVND = formatVND;
-  }
-  if (typeof global !== 'undefined') {
-    global.DatabaseManager = DatabaseManager;
-  }
   if (typeof globalThis !== 'undefined') {
     globalThis.DatabaseManager = DatabaseManager;
     globalThis.DB = dbInstance;
@@ -346,4 +253,3 @@
     module.exports = DatabaseManager;
   }
 })(typeof window !== 'undefined' ? window : this);
-
