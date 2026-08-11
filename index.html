@@ -9,6 +9,7 @@
   
   <!-- PWA Manifest & Icons -->
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
@@ -30,7 +31,9 @@
     <!-- Header -->
     <header id="app-header" class="app-header">
       <div class="header-brand">
-        <span class="brand-icon" aria-hidden="true">💰</span>
+        <span class="brand-icon-wrapper" aria-hidden="true">
+          <img src="icons/logo.svg" alt="Sổ Thu Chi" class="brand-icon-img" width="32" height="32">
+        </span>
         <h1 class="app-title">Sổ Thu Chi</h1>
       </div>
       <div class="header-center">
@@ -52,7 +55,9 @@
     <!-- Navigation (Mobile Bottom Bar / Desktop Sidebar) -->
     <nav id="app-nav" class="app-nav" aria-label="Điều hướng ứng dụng">
       <div class="nav-brand-desktop" aria-hidden="true">
-        <span class="brand-icon">💰</span>
+        <span class="brand-icon-wrapper">
+          <img src="icons/logo.svg" alt="Sổ Thu Chi" class="brand-icon-img" width="36" height="36">
+        </span>
         <span class="brand-name">Sổ Thu Chi</span>
       </div>
       <ul class="nav-list" role="tablist">
