@@ -85,8 +85,12 @@
         throw new Error('Vui lòng nhập Email đăng nhập');
       }
 
+      if (!inputPin) {
+        throw new Error('Vui lòng nhập Mật khẩu / Mã PIN (Không được để trống)');
+      }
+
       const stored = this.getStoredUser();
-      if (stored.pin && inputPin && stored.pin !== inputPin) {
+      if (stored.pin && stored.pin !== inputPin) {
         throw new Error('Mật khẩu / Mã PIN không chính xác!');
       }
 
@@ -97,7 +101,7 @@
         email: inputEmail,
         name: displayName,
         avatar: '👨‍💼',
-        pin: stored.pin || inputPin || '123456',
+        pin: stored.pin || inputPin,
         role: stored.role || 'admin',
         isLoggedIn: true,
         loginTime: new Date().toISOString()
@@ -215,6 +219,8 @@
           loginModal.removeAttribute('hidden');
           loginModal.setAttribute('aria-hidden', 'false');
           loginModal.style.display = 'flex';
+          const pinInput = document.getElementById('auth-pin-input');
+          if (pinInput) pinInput.value = '';
         } else {
           loginModal.setAttribute('hidden', 'true');
           loginModal.setAttribute('aria-hidden', 'true');
@@ -231,23 +237,27 @@
       });
 
       document.addEventListener('click', (e) => {
-        // Quick Login Button
-        const btnQuickLogin = e.target.closest('#btn-quick-login-dong');
-        if (btnQuickLogin) {
+        // Toggle Password Eye Icon
+        const btnTogglePw = e.target.closest('#btn-toggle-auth-pw, .btn-toggle-pw');
+        if (btnTogglePw) {
           e.preventDefault();
-          this.login('phamphuongdong@gmail.com', this.getUser().pin || '123456');
-          if (window.Toast) {
-            window.Toast.show('✅ Đã đăng nhập thành công với phamphuongdong@gmail.com', 'success');
+          const wrapper = btnTogglePw.closest('.pw-input-wrapper');
+          const input = wrapper ? wrapper.querySelector('input') : document.getElementById('auth-pin-input');
+          const eyeIcon = btnTogglePw.querySelector('.eye-icon');
+          if (input) {
+            const isPw = input.type === 'password';
+            input.type = isPw ? 'text' : 'password';
+            if (eyeIcon) eyeIcon.textContent = isPw ? '🙈' : '👁️';
           }
         }
 
-        // Logout Button
-        const btnLogout = e.target.closest('[data-action="logout"], #btn-logout');
+        // Logout / Lock App Button
+        const btnLogout = e.target.closest('[data-action="logout"], #btn-logout, #btn-lock-app');
         if (btnLogout) {
           e.preventDefault();
           this.logout();
           if (window.Toast) {
-            window.Toast.show('🚪 Đã đăng xuất khỏi tài khoản', 'info');
+            window.Toast.show('🔒 Đã khóa ứng dụng và đăng xuất', 'info');
           }
         }
       });
@@ -259,9 +269,12 @@
           e.preventDefault();
           const emailInput = document.getElementById('auth-email-input');
           const pinInput = document.getElementById('auth-pin-input');
+          const pinErrorEl = document.getElementById('auth-pin-error');
 
           const email = emailInput ? emailInput.value : '';
           const pin = pinInput ? pinInput.value : '';
+
+          if (pinErrorEl) pinErrorEl.textContent = '';
 
           try {
             this.login(email, pin);
@@ -269,6 +282,14 @@
               window.Toast.show(`✅ Chào mừng ${this.currentUser.name}!`, 'success');
             }
           } catch (err) {
+            formLogin.classList.remove('shake-error');
+            // Trigger reflow to restart CSS animation
+            void formLogin.offsetWidth;
+            formLogin.classList.add('shake-error');
+
+            if (pinErrorEl) pinErrorEl.textContent = err.message;
+            if (pinInput) pinInput.focus();
+
             if (window.Toast) {
               window.Toast.show(`❌ ${err.message}`, 'error');
             }

@@ -46,6 +46,10 @@
         <button id="theme-toggle" class="icon-btn" aria-label="Đổi giao diện Dark/Light Mode" type="button" title="Giao diện Sáng/Tối">
           <span class="theme-icon" aria-hidden="true">🌙</span>
         </button>
+        <!-- Quick Lock App Button -->
+        <button id="btn-lock-app" class="icon-btn" aria-label="Khóa ứng dụng ngay lập tức" type="button" title="Khóa ứng dụng" data-action="logout" onclick="if(window.Auth) window.Auth.logout();">
+          <span class="lock-icon" aria-hidden="true">🔒</span>
+        </button>
         <!-- User Avatar & Quick Logout -->
         <div id="header-user-badge" class="user-avatar-badge">
           <button type="button" class="btn-avatar-profile" data-action="logout" title="Tài khoản Phạm Phương Đông (Bấm để đăng xuất)" onclick="if(window.Auth) window.Auth.logout();">
@@ -623,12 +627,14 @@
   </div>
 
   <!-- Modal: Authentication / Login -->
-  <div id="modal-auth-login" class="modal-backdrop" hidden aria-hidden="true" style="display: none; z-index: 9999;">
-    <div class="modal-dialog card" role="dialog" aria-labelledby="auth-login-title" style="max-width: 420px; width: 90%;">
-      <div class="modal-header" style="text-align: center; display: block; padding-bottom: 0.5rem;">
-        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🔐</div>
-        <h3 id="auth-login-title" class="modal-title" style="font-size: 1.25rem;">Đăng Nhập Sổ Thu Chi</h3>
-        <p style="margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--text-secondary);">Quản lý tài chính cá nhân an toàn & bảo mật</p>
+  <div id="modal-auth-login" class="modal-backdrop auth-glass-backdrop" hidden aria-hidden="true" style="display: none; z-index: 9999;">
+    <div class="modal-dialog card auth-modal-card" role="dialog" aria-labelledby="auth-login-title">
+      <div class="auth-modal-header">
+        <div class="auth-lock-icon-badge">
+          <span>🔐</span>
+        </div>
+        <h3 id="auth-login-title" class="auth-modal-title">Đăng Nhập Sổ Thu Chi</h3>
+        <p class="auth-modal-subtitle">Xác thực mật khẩu / mã PIN để truy cập tài khoản</p>
       </div>
       <form id="form-auth-login" class="modal-body transaction-form">
         <div class="form-group">
@@ -636,15 +642,18 @@
           <input type="email" id="auth-email-input" class="form-control" value="phamphuongdong@gmail.com" placeholder="phamphuongdong@gmail.com" required>
         </div>
         <div class="form-group">
-          <label for="auth-pin-input" class="form-label">Mật khẩu / Mã PIN</label>
-          <input type="password" id="auth-pin-input" class="form-control" placeholder="Mặc định: 123456" value="123456" maxlength="20">
+          <label for="auth-pin-input" class="form-label">Mật khẩu / Mã PIN <span class="required-star">*</span></label>
+          <div class="pw-input-wrapper">
+            <input type="password" id="auth-pin-input" class="form-control" placeholder="Nhập mật khẩu hoặc mã PIN bảo mật..." required maxlength="30" autocomplete="current-password">
+            <button type="button" id="btn-toggle-auth-pw" class="btn-toggle-pw" aria-label="Hiện/Ẩn mật khẩu" title="Hiện/Ẩn mật khẩu">
+              <span class="eye-icon">👁️</span>
+            </button>
+          </div>
+          <span class="field-error" id="auth-pin-error" aria-live="polite"></span>
         </div>
-        <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
-          <button type="submit" id="btn-submit-login" class="btn btn-primary" style="width: 100%; justify-content: center;">
-            🔑 Đăng Nhập
-          </button>
-          <button type="button" id="btn-quick-login-dong" class="btn btn-secondary" style="width: 100%; justify-content: center; background: rgba(79, 70, 229, 0.08); border-color: rgba(79, 70, 229, 0.2); color: var(--color-primary);">
-            ⚡ Đăng nhập nhanh phamphuongdong@gmail.com
+        <div style="margin-top: 1rem;">
+          <button type="submit" id="btn-submit-login" class="btn btn-primary btn-auth-submit">
+            🔑 Đăng Nhập An Toàn
           </button>
         </div>
       </form>
