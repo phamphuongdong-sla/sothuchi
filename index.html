@@ -98,10 +98,41 @@
     <main id="main-content" class="main-content app-view" role="main">
       <!-- Section: Transactions View -->
       <section id="view-transactions" class="view-panel active" data-view-content="transactions" data-route="transactions">
+        <!-- Financial Overview Hero Dashboard Card -->
+        <div class="card financial-hero-card">
+          <div class="hero-header">
+            <div>
+              <span class="hero-greeting">👋 Xin chào,</span>
+              <h2 class="hero-user-name" id="hero-user-name">Phạm Phương Đông</h2>
+            </div>
+            <div class="hero-period-badge">Tổng Quan Tài Chính 🗓️</div>
+          </div>
+          <div class="hero-balance-container">
+            <span class="hero-balance-label">Số Dư Hiện Có</span>
+            <div class="hero-balance-amount" id="dash-balance-amount">0 ₫</div>
+          </div>
+          <div class="hero-stats-grid">
+            <div class="hero-stat-item stat-income">
+              <div class="stat-icon-wrapper">📈</div>
+              <div class="stat-info">
+                <span class="stat-label">Tổng Thu</span>
+                <span class="stat-value" id="dash-income-amount">0 ₫</span>
+              </div>
+            </div>
+            <div class="hero-stat-item stat-expense">
+              <div class="stat-icon-wrapper">📉</div>
+              <div class="stat-info">
+                <span class="stat-label">Tổng Chi</span>
+                <span class="stat-value" id="dash-expense-amount">0 ₫</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="card form-card">
           <div class="card-header">
-            <h3 class="card-title">Ghi Chép Giao Dịch</h3>
-            <p class="card-subtitle">Nhập nhanh khoản thu hoặc chi tiêu mới</p>
+            <h3 class="card-title">📝 Ghi Chép Giao Dịch Nhanh</h3>
+            <p class="card-subtitle">Nhập khoản thu hoặc chi tiêu mới vào sổ</p>
           </div>
 
           <form id="transaction-form" class="transaction-form" novalidate>

@@ -630,6 +630,7 @@ const TransactionForm = {
 
     Toast.show(`Đã thêm ${type === 'expense' ? 'chi tiêu' : 'thu nhập'} ${formattedVND}!`, 'success');
     this.resetForm();
+    this.updateDashboardStats();
 
     if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
       try {
@@ -674,11 +675,51 @@ const TransactionForm = {
       resetBtn.addEventListener('click', () => this.resetForm());
     }
 
-    // Listen for category updates
+    // Listen for category and auth updates
     if (typeof window !== 'undefined') {
       window.addEventListener('categorieschanged', () => {
         this.populateCategories(this.getCurrentType());
       });
+      window.addEventListener('authchanged', () => {
+        this.updateDashboardStats();
+      });
+    }
+
+    this.updateDashboardStats();
+  },
+
+  updateDashboardStats() {
+    if (typeof document === 'undefined') return;
+    const db = typeof window !== 'undefined' ? window.DB : null;
+    if (!db) return;
+
+    const txs = db.getTransactions();
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    txs.forEach(t => {
+      const amt = Number(t.amount) || 0;
+      if (t.type === 'income') {
+        totalIncome += amt;
+      } else {
+        totalExpense += amt;
+      }
+    });
+
+    const balance = totalIncome - totalExpense;
+
+    const elBalance = document.getElementById('dash-balance-amount');
+    const elIncome = document.getElementById('dash-income-amount');
+    const elExpense = document.getElementById('dash-expense-amount');
+
+    if (elBalance) elBalance.textContent = formatCurrencyVND(balance);
+    if (elIncome) elIncome.textContent = formatCurrencyVND(totalIncome);
+    if (elExpense) elExpense.textContent = formatCurrencyVND(totalExpense);
+
+    const user = (typeof window !== 'undefined' && window.Auth) ? window.Auth.getUser() : null;
+    const elUser = document.getElementById('hero-user-name');
+    if (elUser && user && user.name) {
+      elUser.textContent = user.name;
     }
   }
 };
