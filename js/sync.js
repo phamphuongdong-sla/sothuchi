@@ -225,7 +225,11 @@
       } catch (err) {
         this.isSyncing = false;
         this.updateStatusIndicator('error');
-        return { success: false, error: err.message };
+        const isAuthError = err.message && (err.message.includes('SyntaxError') || err.message.includes('<') || err.message.includes('Unexpected token'));
+        const friendlyMsg = isAuthError 
+          ? 'Google Sheet chưa được Cấp Quyền ghi dữ liệu. Vui lòng mở Apps Script > chọn hàm doGet > bấm ▶ Chạy (Run) để Cấp Quyền!' 
+          : err.message;
+        return { success: false, error: friendlyMsg };
       }
     }
 
