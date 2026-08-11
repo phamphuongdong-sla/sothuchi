@@ -265,6 +265,83 @@ function formatVNDInput(value) {
   return numeric.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
+/**
+ * Convert numeric amount to Vietnamese words
+ * @param {number|string} amount 
+ * @returns {string} Capitalized words string or empty
+ */
+function numberToVietnameseWords(amount) {
+  const num = typeof amount === 'number' ? amount : (parseRawAmount(amount) || 0);
+  if (!num || isNaN(num) || num <= 0) return '';
+
+  const units = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+
+  function readThreeDigits(n, showZeroHundreds) {
+    let res = '';
+    const h = Math.floor(n / 100);
+    const t = Math.floor((n % 100) / 10);
+    const u = n % 10;
+
+    if (h > 0 || showZeroHundreds) {
+      res += units[h] + ' trăm ';
+    }
+
+    if (t > 1) {
+      res += units[t] + ' mươi ';
+      if (u === 1) res += 'mốt';
+      else if (u === 4) res += 'tư';
+      else if (u === 5) res += 'lăm';
+      else if (u > 0) res += units[u];
+    } else if (t === 1) {
+      res += 'mười ';
+      if (u === 1) res += 'một';
+      else if (u === 5) res += 'lăm';
+      else if (u > 0) res += units[u];
+    } else if (t === 0 && u > 0) {
+      if (h > 0 || showZeroHundreds) res += 'lẻ ';
+      if (u === 5 && (h > 0 || showZeroHundreds)) res += 'năm';
+      else res += units[u];
+    }
+
+    return res.trim();
+  }
+
+  let str = Math.floor(num).toString();
+  const groups = [];
+  while (str.length > 0) {
+    groups.push(parseInt(str.slice(-3), 10));
+    str = str.slice(0, -3);
+  }
+
+  const bigNames = ['', 'nghìn', 'triệu', 'tỷ'];
+  const words = [];
+
+  for (let i = groups.length - 1; i >= 0; i--) {
+    const val = groups[i];
+    if (val > 0) {
+      const showZeroH = i < groups.length - 1;
+      const readGroup = readThreeDigits(val, showZeroH);
+
+      const unitIdx = i % 3;
+      const tyLevel = Math.floor(i / 3);
+
+      let unitName = bigNames[unitIdx];
+      if (i > 0 && unitIdx === 0) {
+        unitName = 'tỷ'.repeat(tyLevel);
+      } else if (tyLevel > 0 && unitIdx !== 0) {
+        unitName += ' ' + 'tỷ'.repeat(tyLevel);
+      }
+
+      words.push(`${readGroup} ${unitName}`.trim());
+    }
+  }
+
+  let resultStr = words.join(' ').replace(/\s+/g, ' ').trim();
+  if (!resultStr) return '';
+
+  return resultStr.charAt(0).toUpperCase() + resultStr.slice(1) + ' đồng';
+}
+
 /* --------------------------------------------------------------------------
    Transaction Form Handler
    -------------------------------------------------------------------------- */
@@ -329,6 +406,8 @@ const TransactionForm = {
     document.getElementById('transaction-form')?.reset();
     const amountInput = document.getElementById('input-amount');
     if (amountInput) amountInput.value = '';
+    const wordsBox = document.getElementById('amount-in-words');
+    if (wordsBox) { wordsBox.setAttribute('hidden', ''); wordsBox.innerHTML = ''; }
     const expenseRadio = document.getElementById('type-expense');
     if (expenseRadio) expenseRadio.checked = true;
     const dateInput = document.getElementById('input-date');
@@ -348,6 +427,22 @@ const TransactionForm = {
         Math.max(0, cursor + (formatted.length - raw.length))
       );
     } catch (_) {}
+
+    // Live update Amount in Words
+    const num = parseRawAmount(raw);
+    const words = numberToVietnameseWords(num);
+    const container = input.closest('.form-group')?.querySelector('.amount-in-words') ||
+      (input.id === 'edit-tx-amount' ? document.getElementById('edit-amount-in-words') : document.getElementById('amount-in-words'));
+
+    if (container) {
+      if (words) {
+        container.innerHTML = `<span class="words-icon">🗣️</span> <span>Bằng chữ: <strong>${words}</strong></span>`;
+        container.removeAttribute('hidden');
+      } else {
+        container.setAttribute('hidden', '');
+        container.innerHTML = '';
+      }
+    }
   },
 
   handleSubmit(e) {
@@ -627,12 +722,12 @@ const App = {
    -------------------------------------------------------------------------- */
 Object.assign(window, {
   App, ThemeEngine, Router, TransactionForm, CategoryTreeManager, Toast,
-  parseRawAmount, formatVNDInput
+  parseRawAmount, formatVNDInput, numberToVietnameseWords
 });
 if (typeof globalThis !== 'undefined') {
   Object.assign(globalThis, {
     App, ThemeEngine, Router, TransactionForm, CategoryTreeManager, Toast,
-    parseRawAmount, formatVNDInput
+    parseRawAmount, formatVNDInput, numberToVietnameseWords
   });
 }
 

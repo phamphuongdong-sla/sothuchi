@@ -2040,3 +2040,35 @@ optgroup option {
   border-color: rgba(245, 158, 11, 0.2);
 }
 
+/* --------------------------------------------------------------------------
+   Live Amount-in-Words Badge Styling
+   -------------------------------------------------------------------------- */
+.amount-in-words {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-primary-light);
+  border: 1px solid rgba(79, 70, 229, 0.25);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  animation: fadeIn 0.2s ease-in-out;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.amount-in-words[hidden] {
+  display: none !important;
+}
+
+.amount-in-words .words-icon {
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+.amount-in-words strong {
+  font-weight: 700;
+  color: var(--color-primary);
+}

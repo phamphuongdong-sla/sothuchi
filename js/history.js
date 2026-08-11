@@ -356,6 +356,20 @@
       const noteEl = document.getElementById('edit-tx-note');
       if (noteEl) noteEl.value = tx.note || '';
 
+      // Update words in edit modal
+      const editWordsBox = document.getElementById('edit-amount-in-words');
+      if (editWordsBox) {
+        const toWords = global.numberToVietnameseWords || (n => '');
+        const words = toWords(tx.amount);
+        if (words) {
+          editWordsBox.innerHTML = `<span class="words-icon">🗣️</span> <span>Bằng chữ: <strong>${words}</strong></span>`;
+          editWordsBox.removeAttribute('hidden');
+        } else {
+          editWordsBox.setAttribute('hidden', '');
+          editWordsBox.innerHTML = '';
+        }
+      }
+
       this.populateEditCategories(tx.type, tx.category);
 
       modal.removeAttribute('hidden');
@@ -413,6 +427,8 @@
     closeEditModal() {
       const modal = document.getElementById('modal-edit-tx');
       if (modal) { modal.setAttribute('hidden', ''); modal.setAttribute('aria-hidden', 'true'); }
+      const editWordsBox = document.getElementById('edit-amount-in-words');
+      if (editWordsBox) { editWordsBox.setAttribute('hidden', ''); editWordsBox.innerHTML = ''; }
       this.activeEditId = null;
     }
 
