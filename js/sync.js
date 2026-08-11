@@ -321,6 +321,13 @@
     }
 
     /**
+     * Alias for syncAll()
+     */
+    async sync() {
+      return await this.syncAll();
+    }
+
+    /**
      * Update sync status bar indicator UI element in DOM
      * @param {string} state - 'idle', 'syncing', 'success', 'error', 'offline'
      */
@@ -350,7 +357,7 @@
     }
 
     /**
-     * Register window network listeners for auto-sync
+     * Register window network listeners and click events for manual sync
      */
     initListeners() {
       if (typeof window === 'undefined') return;
@@ -365,6 +372,58 @@
 
       window.addEventListener('offline', () => {
         this.updateStatusIndicator('offline');
+      });
+
+      // Attach click handlers for manual sync and test buttons in Settings
+      document.addEventListener('click', async (e) => {
+        const btnSync = e.target.closest('#btn-manual-sync');
+        if (btnSync) {
+          e.preventDefault();
+          const toast = window.Toast;
+          if (toast) toast.show('🔄 Đang đồng bộ với Google Sheets...', 'info', 2000);
+          btnSync.disabled = true;
+          const origText = btnSync.textContent;
+          btnSync.textContent = '⏳ Đang đồng bộ...';
+
+          try {
+            const res = await this.syncAll();
+            if (res.success) {
+              if (toast) toast.show('✅ Đồng bộ thành công với Google Sheets!', 'success', 3000);
+            } else {
+              if (toast) toast.show('⚠️ Không thể đồng bộ. Vui lòng kiểm tra mạng hoặc kết nối.', 'warning', 4000);
+            }
+          } catch (err) {
+            if (toast) toast.show('❌ Lỗi đồng bộ: ' + err.message, 'error', 4000);
+          } finally {
+            btnSync.disabled = false;
+            btnSync.textContent = origText;
+          }
+        }
+
+        const btnTest = e.target.closest('#btn-test-connection');
+        if (btnTest) {
+          e.preventDefault();
+          const toast = window.Toast;
+          if (toast) toast.show('🧪 Đang kiểm tra kết nối Google Sheets...', 'info', 2000);
+          btnTest.disabled = true;
+          const origText = btnTest.textContent;
+          btnTest.textContent = '⏳ Đang kiểm tra...';
+
+          try {
+            const settings = this.getSettings();
+            const isOk = await this.testConnection(settings.gasUrl);
+            if (isOk) {
+              if (toast) toast.show('✅ Kết nối Google Sheets thành công (HTTP OK)!', 'success', 3000);
+            } else {
+              if (toast) toast.show('❌ Kết nối thất bại. Vui lòng kiểm tra lại Google Sheet.', 'error', 4000);
+            }
+          } catch (err) {
+            if (toast) toast.show('❌ Lỗi kết nối: ' + err.message, 'error', 4000);
+          } finally {
+            btnTest.disabled = false;
+            btnTest.textContent = origText;
+          }
+        }
       });
     }
   }
