@@ -379,46 +379,47 @@
             <p class="card-subtitle">Đổi mật khẩu / mã PIN cá nhân cho tài khoản <strong id="settings-user-info">Phạm Phương Đông (phamphuongdong@gmail.com)</strong></p>
           </div>
           <form id="form-change-password" class="settings-form mt-3">
-            <!-- Step 1: Old Password & Send OTP -->
+            <!-- Old Password -->
             <div class="form-group">
-              <label for="pw-old-input" class="form-label">Mật khẩu hiện tại <span class="required-star">*</span></label>
-              <input type="password" id="pw-old-input" class="form-control" placeholder="Nhập mật khẩu hiện tại (Mặc định: 123456)" required>
+              <label for="pw-old-input" class="form-label">Mật khẩu hiện tại <span class="required-star" id="pw-old-star">*</span></label>
+              <input type="password" id="pw-old-input" class="form-control" placeholder="Nhập mật khẩu hiện tại (Mặc định: 123456)">
+              <span id="pw-old-hint" class="field-error text-muted">Nhập mật khẩu hiện tại hoặc dùng xác thực OTP bên dưới</span>
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Xác minh bảo mật qua Email</label>
+            <!-- OTP Option (Optional / Alternative) -->
+            <div class="form-group auth-otp-section p-3 rounded-lg border">
+              <label class="form-label font-bold">📩 Hoặc Xác Minh Qua Email OTP (Quên mật khẩu cũ)</label>
               <button type="button" id="btn-send-otp" class="btn btn-secondary btn-block">
                 📩 Gửi mã OTP qua Email
               </button>
-              <span id="otp-timer-text" class="field-error"></span>
+              <span id="otp-timer-text" class="field-error mt-1"></span>
+
+              <!-- OTP Input (Shown after Send OTP clicked) -->
+              <div id="otp-input-group" class="mt-2" hidden>
+                <label for="otp-code-input" class="form-label-sm">Nhập mã OTP 6 chữ số:</label>
+                <div class="otp-input-wrapper">
+                  <input type="text" id="otp-code-input" class="form-control amount-input" placeholder="000000" maxlength="6" pattern="[0-9]{6}">
+                  <button type="button" id="btn-verify-otp" class="btn btn-primary btn-sm mt-2">
+                    ✅ Xác Thực OTP
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <!-- Step 2: Input OTP -->
-            <div id="otp-input-group" class="form-group" hidden>
-              <label for="otp-code-input" class="form-label">Mã OTP (6 chữ số) <span class="required-star">*</span></label>
-              <div class="otp-input-wrapper">
-                <input type="text" id="otp-code-input" class="form-control amount-input" placeholder="000000" maxlength="6" pattern="[0-9]{6}">
-                <button type="button" id="btn-verify-otp" class="btn btn-primary btn-sm mt-2">
-                  ✅ Xác Thực OTP
-                </button>
-              </div>
+            <!-- New Password & Confirm Password (Always visible) -->
+            <div class="form-group">
+              <label for="pw-new-input" class="form-label">Mật khẩu mới <span class="required-star">*</span></label>
+              <input type="password" id="pw-new-input" class="form-control" placeholder="Mật khẩu mới (Tối thiểu 4 ký tự)" required minlength="4">
+            </div>
+            <div class="form-group">
+              <label for="pw-confirm-input" class="form-label">Xác nhận mật khẩu mới <span class="required-star">*</span></label>
+              <input type="password" id="pw-confirm-input" class="form-control" placeholder="Nhập lại mật khẩu mới" required minlength="4">
             </div>
 
-            <!-- Step 3: New Password (unlocked after OTP verified) -->
-            <div id="new-pw-group" hidden>
-              <div class="form-group">
-                <label for="pw-new-input" class="form-label">Mật khẩu mới <span class="required-star">*</span></label>
-                <input type="password" id="pw-new-input" class="form-control" placeholder="Mật khẩu mới (Tối thiểu 4 ký tự)" minlength="4">
-              </div>
-              <div class="form-group">
-                <label for="pw-confirm-input" class="form-label">Xác nhận mật khẩu mới <span class="required-star">*</span></label>
-                <input type="password" id="pw-confirm-input" class="form-control" placeholder="Nhập lại mật khẩu mới" minlength="4">
-              </div>
-              <div class="form-actions mt-3">
-                <button type="submit" id="btn-save-password" class="btn btn-primary">
-                  🔑 Đặt Mật Khẩu Mới
-                </button>
-              </div>
+            <div class="form-actions mt-3">
+              <button type="submit" id="btn-save-password" class="btn btn-primary">
+                🔑 Đổi Mật Khẩu
+              </button>
             </div>
           </form>
         </div>

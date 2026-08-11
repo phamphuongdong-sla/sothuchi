@@ -259,15 +259,18 @@
       }
     }
 
-    changePasswordWithOtp(oldPin, newPin, confirmPin) {
+    changePassword(oldPin, newPin, confirmPin) {
       const current = this.getUser();
       const inputOld = String(oldPin || '').trim();
       const inputNew = String(newPin || '').trim();
       const inputConfirm = String(confirmPin || '').trim();
 
-      if (!inputOld) throw new Error('Vui lòng nhập Mật khẩu hiện tại');
-      if (current.pin && inputOld !== current.pin) throw new Error('Mật khẩu hiện tại không đúng!');
-      if (!this.otpState.verified) throw new Error('Vui lòng xác nhận mã OTP gửi qua Email trước khi đổi mật khẩu!');
+      // If OTP verified -> old PIN is optional. If OTP not verified -> old PIN is required
+      if (!this.otpState.verified) {
+        if (!inputOld) throw new Error('Vui lòng nhập Mật khẩu hiện tại (hoặc xác thực OTP bên dưới)');
+        if (current.pin && inputOld !== current.pin) throw new Error('Mật khẩu hiện tại không đúng!');
+      }
+
       if (!inputNew || inputNew.length < 4) throw new Error('Mật khẩu mới phải có ít nhất 4 ký tự!');
       if (inputNew !== inputConfirm) throw new Error('Xác nhận mật khẩu mới không trùng khớp!');
 
@@ -450,11 +453,11 @@
           return;
         }
 
-        // Change password form with OTP
+        // Change password form
         if (e.target.closest('#form-change-password')) {
           e.preventDefault();
           try {
-            this.changePasswordWithOtp(
+            this.changePassword(
               document.getElementById('pw-old-input')?.value || '',
               document.getElementById('pw-new-input')?.value || '',
               document.getElementById('pw-confirm-input')?.value || ''
@@ -463,10 +466,10 @@
               const el = document.getElementById(id);
               if (el) el.value = '';
             });
-            const newPwGroup = document.getElementById('new-pw-group');
-            if (newPwGroup) newPwGroup.hidden = true;
             const btnSend = document.getElementById('btn-send-otp');
             if (btnSend) { btnSend.disabled = false; btnSend.textContent = '📩 Gửi mã OTP qua Email'; }
+            const timerText = document.getElementById('otp-timer-text');
+            if (timerText) { timerText.textContent = ''; timerText.className = 'field-error'; }
             window.Toast?.show('🎉 Đã đổi mật khẩu thành công!', 'success');
           } catch (err) {
             window.Toast?.show(`❌ ${err.message}`, 'error');
