@@ -378,23 +378,47 @@
             <h3 class="card-title">🔐 Bảo Mật Tài Khoản & Đổi Mật Khẩu</h3>
             <p class="card-subtitle">Đổi mật khẩu / mã PIN cá nhân cho tài khoản <strong id="settings-user-info">Phạm Phương Đông (phamphuongdong@gmail.com)</strong></p>
           </div>
-          <form id="form-change-password" class="settings-form" style="margin-top: 1rem;">
+          <form id="form-change-password" class="settings-form mt-3">
+            <!-- Step 1: Old Password & Send OTP -->
             <div class="form-group">
               <label for="pw-old-input" class="form-label">Mật khẩu hiện tại <span class="required-star">*</span></label>
               <input type="password" id="pw-old-input" class="form-control" placeholder="Nhập mật khẩu hiện tại (Mặc định: 123456)" required>
             </div>
+
             <div class="form-group">
-              <label for="pw-new-input" class="form-label">Mật khẩu mới <span class="required-star">*</span></label>
-              <input type="password" id="pw-new-input" class="form-control" placeholder="Mật khẩu mới (Tối thiểu 4 ký tự)" required minlength="4">
-            </div>
-            <div class="form-group">
-              <label for="pw-confirm-input" class="form-label">Xác nhận mật khẩu mới <span class="required-star">*</span></label>
-              <input type="password" id="pw-confirm-input" class="form-control" placeholder="Nhập lại mật khẩu mới" required minlength="4">
-            </div>
-            <div class="form-actions">
-              <button type="submit" id="btn-save-password" class="btn btn-primary">
-                🔑 Cập Nhật Mật Khẩu
+              <label class="form-label">Xác minh bảo mật qua Email</label>
+              <button type="button" id="btn-send-otp" class="btn btn-secondary btn-block">
+                📩 Gửi mã OTP qua Email
               </button>
+              <span id="otp-timer-text" class="field-error"></span>
+            </div>
+
+            <!-- Step 2: Input OTP -->
+            <div id="otp-input-group" class="form-group" hidden>
+              <label for="otp-code-input" class="form-label">Mã OTP (6 chữ số) <span class="required-star">*</span></label>
+              <div class="otp-input-wrapper">
+                <input type="text" id="otp-code-input" class="form-control amount-input" placeholder="000000" maxlength="6" pattern="[0-9]{6}">
+                <button type="button" id="btn-verify-otp" class="btn btn-primary btn-sm mt-2">
+                  ✅ Xác Thực OTP
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 3: New Password (unlocked after OTP verified) -->
+            <div id="new-pw-group" hidden>
+              <div class="form-group">
+                <label for="pw-new-input" class="form-label">Mật khẩu mới <span class="required-star">*</span></label>
+                <input type="password" id="pw-new-input" class="form-control" placeholder="Mật khẩu mới (Tối thiểu 4 ký tự)" minlength="4">
+              </div>
+              <div class="form-group">
+                <label for="pw-confirm-input" class="form-label">Xác nhận mật khẩu mới <span class="required-star">*</span></label>
+                <input type="password" id="pw-confirm-input" class="form-control" placeholder="Nhập lại mật khẩu mới" minlength="4">
+              </div>
+              <div class="form-actions mt-3">
+                <button type="submit" id="btn-save-password" class="btn btn-primary">
+                  🔑 Đặt Mật Khẩu Mới
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -412,6 +436,39 @@
               <option value="member">👤 Thành viên (Member) - Được xem & nhập thu chi, không được đổi cài đặt hệ thống</option>
               <option value="viewer">👁️ Người xem (Viewer) - Chỉ được xem báo cáo & lịch sử giao dịch</option>
             </select>
+          </div>
+
+          <div class="role-permissions-matrix mt-3">
+            <h4 class="form-label-sm mb-2">📋 Chi tiết bảng phân quyền:</h4>
+            <div class="role-perm-grid">
+              <div class="perm-card perm-admin">
+                <strong>👑 Admin</strong>
+                <ul>
+                  <li>✅ Thêm, sửa, xóa giao dịch</li>
+                  <li>✅ Quản lý hạng mục 3 tầng</li>
+                  <li>✅ Thay đổi vai trò người dùng</li>
+                  <li>✅ Xem báo cáo & đồng bộ Sheets</li>
+                </ul>
+              </div>
+              <div class="perm-card perm-member">
+                <strong>👤 Member</strong>
+                <ul>
+                  <li>✅ Thêm, sửa, xóa giao dịch</li>
+                  <li>✅ Xem báo cáo & đồng bộ Sheets</li>
+                  <li>❌ Quản lý hạng mục 3 tầng</li>
+                  <li>❌ Thay đổi vai trò người dùng</li>
+                </ul>
+              </div>
+              <div class="perm-card perm-viewer">
+                <strong>👁️ Viewer</strong>
+                <ul>
+                  <li>✅ Xem lịch sử giao dịch</li>
+                  <li>✅ Xem báo cáo biểu đồ</li>
+                  <li>❌ Không được thêm/sửa/xóa</li>
+                  <li>❌ Không được thay đổi cài đặt</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
 
