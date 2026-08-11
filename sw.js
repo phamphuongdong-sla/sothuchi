@@ -3,7 +3,7 @@
    Cache Version: so-thu-chi-v1
    ========================================================================== */
 
-const CACHE_NAME = 'so-thu-chi-v1';
+const CACHE_NAME = 'so-thu-chi-v2';
 
 // Essential App Shell resources to precache upon installation
 const PRECACHE_ASSETS = [

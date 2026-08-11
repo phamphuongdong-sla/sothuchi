@@ -359,13 +359,15 @@
       // Update words in edit modal
       const editWordsBox = document.getElementById('edit-amount-in-words');
       if (editWordsBox) {
-        const toWords = global.numberToVietnameseWords || (n => '');
-        const words = toWords(tx.amount);
+        const toWords = global.numberToVietnameseWords || window.numberToVietnameseWords;
+        const words = typeof toWords === 'function' ? toWords(tx.amount) : '';
         if (words) {
           editWordsBox.innerHTML = `<span class="words-icon">🗣️</span> <span>Bằng chữ: <strong>${words}</strong></span>`;
           editWordsBox.removeAttribute('hidden');
+          editWordsBox.style.display = 'flex';
         } else {
           editWordsBox.setAttribute('hidden', '');
+          editWordsBox.style.display = 'none';
           editWordsBox.innerHTML = '';
         }
       }
@@ -428,7 +430,7 @@
       const modal = document.getElementById('modal-edit-tx');
       if (modal) { modal.setAttribute('hidden', ''); modal.setAttribute('aria-hidden', 'true'); }
       const editWordsBox = document.getElementById('edit-amount-in-words');
-      if (editWordsBox) { editWordsBox.setAttribute('hidden', ''); editWordsBox.innerHTML = ''; }
+      if (editWordsBox) { editWordsBox.setAttribute('hidden', ''); editWordsBox.style.display = 'none'; editWordsBox.innerHTML = ''; }
       this.activeEditId = null;
     }
 

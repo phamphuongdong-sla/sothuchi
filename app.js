@@ -416,30 +416,46 @@ const TransactionForm = {
   },
 
   handleAmountInput(e) {
-    const input = e.target;
-    const raw = input.value;
+    const input = (e && e.target) ? e.target : (typeof e === 'string' ? document.getElementById(e) : e);
+    if (!input) return;
+
+    const raw = input.value || '';
     const cursor = input.selectionStart || raw.length;
     const formatted = formatVNDInput(raw);
-    input.value = formatted;
-    try {
-      input.setSelectionRange(
-        Math.max(0, cursor + (formatted.length - raw.length)),
-        Math.max(0, cursor + (formatted.length - raw.length))
-      );
-    } catch (_) {}
+
+    if (input.value !== formatted) {
+      input.value = formatted;
+      try {
+        input.setSelectionRange(
+          Math.max(0, cursor + (formatted.length - raw.length)),
+          Math.max(0, cursor + (formatted.length - raw.length))
+        );
+      } catch (_) {}
+    }
 
     // Live update Amount in Words
     const num = parseRawAmount(raw);
-    const words = numberToVietnameseWords(num);
-    const container = input.closest('.form-group')?.querySelector('.amount-in-words') ||
-      (input.id === 'edit-tx-amount' ? document.getElementById('edit-amount-in-words') : document.getElementById('amount-in-words'));
+    const toWords = window.numberToVietnameseWords || numberToVietnameseWords;
+    const words = typeof toWords === 'function' ? toWords(num) : '';
+
+    let container = null;
+    if (input.id === 'input-amount') {
+      container = document.getElementById('amount-in-words');
+    } else if (input.id === 'edit-tx-amount') {
+      container = document.getElementById('edit-amount-in-words');
+    }
+    if (!container && input.closest) {
+      container = input.closest('.form-group')?.querySelector('.amount-in-words');
+    }
 
     if (container) {
       if (words) {
         container.innerHTML = `<span class="words-icon">🗣️</span> <span>Bằng chữ: <strong>${words}</strong></span>`;
         container.removeAttribute('hidden');
+        container.style.display = 'flex';
       } else {
         container.setAttribute('hidden', '');
+        container.style.display = 'none';
         container.innerHTML = '';
       }
     }
@@ -490,8 +506,23 @@ const TransactionForm = {
       r.addEventListener('change', e => this.populateCategories(e.target.value))
     );
 
-    document.getElementById('input-amount')
-      ?.addEventListener('input', e => this.handleAmountInput(e));
+    // Multi-event listeners for mobile virtual keyboards (input, keyup, change, compositionend, focus)
+    const amountEvents = ['input', 'keyup', 'change', 'compositionend', 'focus', 'blur'];
+    const amountInput = document.getElementById('input-amount');
+    if (amountInput) {
+      amountEvents.forEach(evt => {
+        amountInput.addEventListener(evt, e => this.handleAmountInput(e));
+      });
+    }
+
+    // Document-level delegation fallback for mobile virtual keyboards
+    amountEvents.forEach(evt => {
+      document.addEventListener(evt, e => {
+        if (e.target && (e.target.id === 'input-amount' || e.target.id === 'edit-tx-amount' || e.target.classList?.contains('amount-input'))) {
+          this.handleAmountInput(e);
+        }
+      });
+    });
 
     document.getElementById('transaction-form')
       ?.addEventListener('submit', e => this.handleSubmit(e));
