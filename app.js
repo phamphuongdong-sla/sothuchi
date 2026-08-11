@@ -156,6 +156,12 @@ const Router = {
   render() {
     const active = this.getCurrentRoute();
 
+    const viewTitle = document.getElementById('view-title');
+    if (viewTitle) {
+      const map = this?.TITLE_MAP || { transactions: 'Giao dịch', budget: 'Ngân sách', reports: 'Báo cáo', settings: 'Cài đặt' };
+      viewTitle.textContent = map[active] || 'Giao dịch';
+    }
+
     // Update view panels
     querySelectorAllMultiple(['.view-panel', '[data-view-content]', '[data-route]']).forEach(panel => {
       const route = panel.getAttribute('data-route') ||
@@ -164,20 +170,32 @@ const Router = {
       if (route === active) {
         panel.classList.add('active');
         panel.removeAttribute('hidden');
+        if (panel.style) panel.style.display = 'block';
       } else {
         panel.classList.remove('active');
         panel.setAttribute('hidden', '');
+        if (panel.style) panel.style.display = 'none';
       }
     });
 
     // Update nav links
     querySelectorAllMultiple(['.nav-link', '[data-view]', '[role="tab"]']).forEach(link => {
-      const route = link.getAttribute('data-view') ||
-                    link.getAttribute('href')?.replace(/^#\/?/, '').trim() ||
-                    link.id?.replace(/^nav-/, '') || '';
+      const route = (typeof link.getAttribute === 'function' && link.getAttribute('data-view')) ||
+                    (typeof link.getAttribute === 'function' && link.getAttribute('href')?.replace(/^#\/?/, '').trim()) ||
+                    (link.id && link.id.replace(/^nav-/, '')) || '';
       const isActive = route === active;
-      link.classList.toggle('active', isActive);
-      link.setAttribute('aria-selected', String(isActive));
+      if (link && link.classList) {
+        if (typeof link.classList.toggle === 'function') {
+          link.classList.toggle('active', isActive);
+        } else if (isActive && typeof link.classList.add === 'function') {
+          link.classList.add('active');
+        } else if (!isActive && typeof link.classList.remove === 'function') {
+          link.classList.remove('active');
+        }
+      }
+      if (link && typeof link.setAttribute === 'function') {
+        link.setAttribute('aria-selected', String(isActive));
+      }
     });
 
     window.dispatchEvent(new CustomEvent('routechanged', { detail: { route: active } }));

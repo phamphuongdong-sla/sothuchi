@@ -146,16 +146,21 @@
       transactions.forEach(tx => {
         const key = tx.date || 'Khác';
         if (!map[key]) {
-          map[key] = { date: key, transactions: [], totalIncome: 0, totalExpense: 0 };
+          map[key] = { date: key, transactions: [], totalIncome: 0, totalExpense: 0, netTotal: 0 };
         }
         map[key].transactions.push(tx);
         const amt = Number(tx.amount) || 0;
         if (tx.type === 'income') map[key].totalIncome += amt;
         else map[key].totalExpense += amt;
+        map[key].netTotal = map[key].totalIncome - map[key].totalExpense;
       });
       return Object.keys(map)
         .sort((a, b) => b.localeCompare(a))
         .map(k => map[k]);
+    }
+
+    groupTransactionsByDate(transactions) {
+      return this.groupByDate(transactions);
     }
 
     /* ----------------------------------------------------------------

@@ -1,108 +1,45 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Notebook Cover Gradient -->
-    <linearGradient id="coverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <!-- Notebook Cover Indigo Gradient -->
+    <linearGradient id="bookGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#6366f1" />
-      <stop offset="45%" stop-color="#4f46e5" />
-      <stop offset="100%" stop-color="#3730a3" />
+      <stop offset="100%" stop-color="#4338ca" />
     </linearGradient>
 
-    <!-- Notebook Spine/Accent Gradient -->
-    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <!-- Gold Spine Accent -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#fbbf24" />
-      <stop offset="50%" stop-color="#f59e0b" />
       <stop offset="100%" stop-color="#d97706" />
     </linearGradient>
 
-    <!-- Emerald Income Ribbon -->
-    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+    <!-- Emerald Growth Gradient -->
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#34d399" />
       <stop offset="100%" stop-color="#059669" />
     </linearGradient>
-
-    <!-- Rose Expense Ribbon -->
-    <linearGradient id="roseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#fb7185" />
-      <stop offset="100%" stop-color="#e11d48" />
-    </linearGradient>
-
-    <!-- Ring Binder Metallic Gradient -->
-    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#94a3b8" />
-      <stop offset="35%" stop-color="#ffffff" />
-      <stop offset="70%" stop-color="#cbd5e1" />
-      <stop offset="100%" stop-color="#64748b" />
-    </linearGradient>
-
-    <!-- Inner Emblem Background -->
-    <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1e1b4b" />
-      <stop offset="100%" stop-color="#312e81" />
-    </linearGradient>
-
-    <!-- Glossy Overlay -->
-    <linearGradient id="glossGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.3" />
-      <stop offset="40%" stop-color="#ffffff" stop-opacity="0.08" />
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
-    </linearGradient>
   </defs>
 
-  <g transform="translate(48, 20)">
-    <!-- Paper Pages (Right side of notebook stack) -->
-    <path d="M 272 55 L 288 62 L 288 322 L 272 315 Z" fill="#cbd5e1" />
-    <path d="M 268 50 C 278 50, 284 55, 284 60 L 284 318 C 284 322, 276 325, 268 325 Z" fill="#f8fafc" />
-    <line x1="276" y1="68" x2="276" y2="312" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4" />
+  <g transform="translate(48, 48)">
+    <!-- Main Indigo Book Cover -->
+    <rect x="88" y="64" width="240" height="288" rx="20" fill="url(#bookGrad)" />
 
-    <!-- Ribbon Bookmarks hanging from bottom -->
-    <path d="M 125 310 L 125 366 L 137 354 L 149 366 L 149 310 Z" fill="url(#emeraldGrad)" />
-    <path d="M 159 310 L 159 356 L 169 346 L 179 356 L 179 310 Z" fill="url(#roseGrad)" />
+    <!-- Left Spine Accent (Gold Strip) -->
+    <path d="M 88 84 C 88 73, 97 64, 108 64 L 128 64 L 128 352 L 108 352 C 97 352, 88 343, 88 332 Z" fill="url(#goldGrad)" />
 
-    <!-- Main Notebook Cover -->
-    <rect x="35" y="35" width="235" height="285" rx="18" fill="url(#coverGrad)" />
+    <!-- Spine Binding Notches -->
+    <line x1="100" y1="128" x2="116" y2="128" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.9" />
+    <line x1="100" y1="208" x2="116" y2="208" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.9" />
+    <line x1="100" y1="288" x2="116" y2="288" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.9" />
 
-    <!-- Cover Gloss Overlay -->
-    <path d="M 35 53 C 35 43, 43 35, 53 35 L 252 35 C 262 35, 270 43, 270 53 L 270 165 L 35 95 Z" fill="url(#glossGrad)" />
+    <!-- Ribbon Bookmark hanging at top right -->
+    <path d="M 264 64 L 264 120 L 280 106 L 296 120 L 296 64 Z" fill="url(#emeraldGrad)" />
 
-    <!-- Left Spine Accent Strip (Gold Binding) -->
-    <path d="M 35 53 C 35 43, 43 35, 53 35 L 68 35 L 68 320 L 53 320 C 43 320, 35 312, 35 302 Z" fill="url(#goldGrad)" opacity="0.95" />
+    <!-- Central Upward Trend Arrow -->
+    <path d="M 164 248 L 204 208 L 232 228 L 280 168" fill="none" stroke="#34d399" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M 256 168 L 280 168 L 280 192" fill="none" stroke="#34d399" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
 
-    <!-- Spine Line -->
-    <line x1="68" y1="35" x2="68" y2="320" stroke="#b45309" stroke-width="2" opacity="0.5" />
-
-    <!-- Ring Binder Rings -->
-    <rect x="16" y="62" width="32" height="12" rx="6" fill="url(#ringGrad)" />
-    <circle cx="31" cy="68" r="2.5" fill="#334155" />
-
-    <rect x="16" y="112" width="32" height="12" rx="6" fill="url(#ringGrad)" />
-    <circle cx="31" cy="118" r="2.5" fill="#334155" />
-
-    <rect x="16" y="162" width="32" height="12" rx="6" fill="url(#ringGrad)" />
-    <circle cx="31" cy="168" r="2.5" fill="#334155" />
-
-    <rect x="16" y="212" width="32" height="12" rx="6" fill="url(#ringGrad)" />
-    <circle cx="31" cy="218" r="2.5" fill="#334155" />
-
-    <rect x="16" y="262" width="32" height="12" rx="6" fill="url(#ringGrad)" />
-    <circle cx="31" cy="268" r="2.5" fill="#334155" />
-
-    <!-- Decorative Cover Lines -->
-    <rect x="95" y="68" width="140" height="6" rx="3" fill="#ffffff" opacity="0.25" />
-    <rect x="95" y="84" width="90" height="5" rx="2.5" fill="#ffffff" opacity="0.18" />
-
-    <rect x="95" y="260" width="140" height="5" rx="2.5" fill="#ffffff" opacity="0.18" />
-    <rect x="95" y="273" width="95" height="5" rx="2.5" fill="#ffffff" opacity="0.12" />
-
-    <!-- Central Emblem -->
-    <circle cx="165" cy="172" r="54" fill="url(#goldGrad)" />
-    <circle cx="165" cy="172" r="47" fill="url(#badgeGrad)" />
-
-    <!-- Upward Trend Line -->
-    <path d="M 134 192 L 153 173 L 165 182 L 192 148" fill="none" stroke="#34d399" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" />
-    <path d="M 179 148 L 192 148 L 192 161" fill="none" stroke="#34d399" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" />
-
-    <!-- Currency Coin Badge ("₫") -->
-    <circle cx="140" cy="158" r="13" fill="url(#goldGrad)" />
-    <text x="140" y="163" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="900" fill="#78350f" text-anchor="middle">₫</text>
+    <!-- Minimalist "₫" Currency Emblem Badge -->
+    <circle cx="188" cy="192" r="28" fill="#ffffff" />
+    <text x="188" y="202" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif" font-size="28" font-weight="900" fill="#4338ca" text-anchor="middle">₫</text>
   </g>
 </svg>

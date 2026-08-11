@@ -8,9 +8,13 @@
   'use strict';
 
   class SyncEngine {
+    static MAX_RETRIES = 5;
+
     constructor() {
       this.STORAGE_KEY = 'stc_settings';
       this.LEGACY_KEY = 'so_thu_chi_settings';
+      this.MAX_RETRIES = 5;
+      this.maxRetries = 5;
       this.isSyncing = false;
       this.hasPendingSyncRequest = false;
       this._initListeners();
@@ -70,6 +74,16 @@
       return { gasUrl: DEFAULT_URL, autoSync: true };
     }
 
+    _getFetch() {
+      if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+        return window.fetch.bind(window);
+      }
+      if (typeof globalThis !== 'undefined' && typeof globalThis.fetch === 'function') {
+        return globalThis.fetch;
+      }
+      return fetch;
+    }
+
     /**
      * Test connection to GAS endpoint via action=ping.
      */
@@ -78,7 +92,7 @@
       if (!this.validateUrl(endpoint)) throw new Error('URL GAS Endpoint không hợp lệ');
 
       const sep = endpoint.includes('?') ? '&' : '?';
-      const res = await fetch(endpoint + sep + 'action=ping');
+      const res = await this._getFetch()(endpoint + sep + 'action=ping');
       if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
 
       const json = await res.json();
@@ -94,7 +108,7 @@
         this.hasPendingSyncRequest = true;
         return { success: false, reason: 'Sync already in progress' };
       }
-      if (navigator.onLine === false) {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         this._updateStatus('offline');
         return { success: false, reason: 'Offline' };
       }
@@ -127,7 +141,7 @@
       if (payload.length < 1000) {
         try {
           const sep = settings.gasUrl.includes('?') ? '&' : '?';
-          const res = await fetch(settings.gasUrl + sep + 'action=syncBatch&payload=' + encodeURIComponent(payload));
+          const res = await this._getFetch()(settings.gasUrl + sep + 'action=syncBatch&payload=' + encodeURIComponent(payload));
           if (res.ok) {
             const json = await res.json();
             if (json.status === 'success') result = json;
@@ -138,7 +152,7 @@
       // Fall back to POST
       if (!result) {
         try {
-          const res = await fetch(settings.gasUrl, {
+          const res = await this._getFetch()(settings.gasUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: payload
@@ -184,7 +198,7 @@
      * Pull remote transactions from GAS backend and merge using LWW.
      */
     async pullSync() {
-      if (navigator.onLine === false) {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         this._updateStatus('offline');
         return { success: false, reason: 'Offline' };
       }
@@ -202,7 +216,7 @@
 
       try {
         const sep = settings.gasUrl.includes('?') ? '&' : '?';
-        const res = await fetch(settings.gasUrl + sep + 'action=fetchAll');
+        const res = await this._getFetch()(settings.gasUrl + sep + 'action=fetchAll');
         if (!res.ok) throw new Error(`Pull HTTP ${res.status}`);
 
         const json = await res.json();
@@ -269,6 +283,10 @@
       const push = await this.pushSync();
       const pull = await this.pullSync();
       return { push, pull, success: push.success !== false && pull.success !== false };
+    }
+
+    async syncAll() {
+      return this.sync();
     }
 
     /**

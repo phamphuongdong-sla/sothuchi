@@ -67,7 +67,7 @@
         if (altKey) s.setItem(altKey, value);
       } catch (e) {
         if (e?.name === 'QuotaExceededError' || e?.code === 22) {
-          throw new Error('Dung lượng lưu trữ trình duyệt đã đầy');
+          throw new Error('QuotaExceededError: Dung lượng lưu trữ trình duyệt đã đầy');
         }
         throw e;
       }

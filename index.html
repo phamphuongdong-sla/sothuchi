@@ -35,6 +35,7 @@
           <img src="icons/logo.svg" alt="Sổ Thu Chi" class="brand-icon-img" width="30" height="30">
         </span>
         <span class="app-title">Sổ Thu Chi</span>
+        <h2 id="view-title" class="view-title" hidden>Giao dịch</h2>
       </div>
       <div class="header-actions">
         <!-- Sync Status Indicator (hidden by default) -->
@@ -374,58 +375,6 @@
               🧪 Kiểm Tra Kết Nối
             </button>
           </div>
-        </div>
-
-        <!-- Account Security & Change Password Card -->
-        <div class="card settings-card mt-4">
-          <div class="card-header">
-            <h3 class="card-title">🔐 Bảo Mật Tài Khoản & Đổi Mật Khẩu</h3>
-            <p class="card-subtitle">Đổi mật khẩu / mã PIN cá nhân cho tài khoản <strong id="settings-user-info">Phạm Phương Đông (phamphuongdong@gmail.com)</strong></p>
-          </div>
-          <form id="form-change-password" class="settings-form mt-3">
-            <!-- Old Password -->
-            <div class="form-group">
-              <label for="pw-old-input" class="form-label">Mật khẩu hiện tại <span class="required-star" id="pw-old-star">*</span></label>
-              <input type="password" id="pw-old-input" class="form-control" placeholder="Nhập mật khẩu hiện tại (Mặc định: 123456)">
-              <span id="pw-old-hint" class="field-error text-muted">Nhập mật khẩu hiện tại hoặc dùng xác thực OTP bên dưới</span>
-            </div>
-
-            <!-- OTP Option (Optional / Alternative) -->
-            <div class="form-group auth-otp-section p-3 rounded-lg border">
-              <label class="form-label font-bold">📩 Hoặc Xác Minh Qua Email OTP (Quên mật khẩu cũ)</label>
-              <button type="button" id="btn-send-otp" class="btn btn-secondary btn-block">
-                📩 Gửi mã OTP qua Email
-              </button>
-              <span id="otp-timer-text" class="field-error mt-1"></span>
-
-              <!-- OTP Input (Shown after Send OTP clicked) -->
-              <div id="otp-input-group" class="mt-2" hidden>
-                <label for="otp-code-input" class="form-label-sm">Nhập mã OTP 6 chữ số:</label>
-                <div class="otp-input-wrapper">
-                  <input type="text" id="otp-code-input" class="form-control amount-input" placeholder="000000" maxlength="6" pattern="[0-9]{6}">
-                  <button type="button" id="btn-verify-otp" class="btn btn-primary btn-sm mt-2">
-                    ✅ Xác Thực OTP
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- New Password & Confirm Password (Always visible) -->
-            <div class="form-group">
-              <label for="pw-new-input" class="form-label">Mật khẩu mới <span class="required-star">*</span></label>
-              <input type="password" id="pw-new-input" class="form-control" placeholder="Mật khẩu mới (Tối thiểu 4 ký tự)" required minlength="4">
-            </div>
-            <div class="form-group">
-              <label for="pw-confirm-input" class="form-label">Xác nhận mật khẩu mới <span class="required-star">*</span></label>
-              <input type="password" id="pw-confirm-input" class="form-control" placeholder="Nhập lại mật khẩu mới" required minlength="4">
-            </div>
-
-            <div class="form-actions mt-3">
-              <button type="submit" id="btn-save-password" class="btn btn-primary">
-                🔑 Đổi Mật Khẩu
-              </button>
-            </div>
-          </form>
         </div>
 
         <!-- Role-Based Permissions Card -->
