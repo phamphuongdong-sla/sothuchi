@@ -2071,3 +2071,281 @@ optgroup option {
   font-weight: 700;
   color: var(--color-primary);
 }
+
+/* ==========================================================================
+   Financial Intelligence & Reports Upgrade CSS
+   ========================================================================== */
+
+/* Reports Tools Header */
+.reports-header-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+@media (min-width: 640px) {
+  .reports-header-tools {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.reports-export-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Executive Smart Summary Card */
+.smart-summary-card {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+}
+
+.smart-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.smart-summary-badge {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  padding: 0.25rem 0.6rem;
+  border-radius: 20px;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+}
+
+.health-score-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 20px;
+}
+
+.health-excellent { background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); }
+.health-good { background: rgba(59, 130, 246, 0.15); color: #2563eb; border: 1px solid rgba(59, 130, 246, 0.3); }
+.health-moderate { background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3); }
+.health-warning { background: rgba(239, 68, 68, 0.15); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+.smart-summary-body {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--color-text-primary);
+}
+
+.smart-summary-body p {
+  margin-bottom: 0.5rem;
+}
+
+.smart-summary-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* MoM Badges inside KPI cards */
+.mom-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  margin-top: 0.2rem;
+  display: inline-block;
+}
+
+.mom-positive { color: #10b981; }
+.mom-negative { color: #ef4444; }
+
+.sub-value {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.2rem;
+}
+
+/* Chart Wrapper Large */
+.chart-wrapper--lg {
+  height: 280px;
+}
+
+/* 50/30/20 Rule Progress Bars */
+.rule-503020-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.rule-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.rule-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.progress-bar-bg {
+  height: 10px;
+  background: var(--color-bg);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.4s ease;
+}
+
+.fill-needs { background: #4f46e5; }
+.fill-wants { background: #f59e0b; }
+.fill-savings { background: #10b981; }
+
+/* Top Expenses List */
+.top-expenses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.top-expense-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.expense-rank {
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--color-primary);
+  width: 24px;
+}
+
+.expense-details {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.expense-details strong {
+  font-size: 0.88rem;
+}
+
+.expense-note {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.expense-amount-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.expense-amount-val {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--expense-color);
+}
+
+.expense-pct-tag {
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+}
+
+/* Drilldown Modal */
+.modal-dialog-lg {
+  max-width: 600px;
+  width: 90%;
+}
+
+.drilldown-summary-bar {
+  padding: 0.75rem 1rem;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+}
+
+.drilldown-summary-item {
+  display: flex;
+  justify-content: space-between;
+}
+
+.drilldown-tx-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.drilldown-tx-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.drilldown-tx-item:last-child {
+  border-bottom: none;
+}
+
+.tx-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.tx-date {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.tx-note {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.tx-amount {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* Native Print Styles (@media print) */
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .app-header,
+  .bottom-nav,
+  .reports-export-actions,
+  .btn,
+  .modal-backdrop {
+    display: none !important;
+  }
+
+  .view-panel {
+    display: block !important;
+  }
+
+  .card {
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+}

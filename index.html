@@ -271,8 +271,23 @@
 
       <!-- Section: Reports & Charts View -->
       <section id="view-reports" class="view-panel" data-view-content="reports" data-route="reports">
-        <!-- 1. Reports Date Range & Filter Bar -->
+        <!-- 1. Export & Action Tools Bar -->
         <div class="card reports-filter-card">
+          <div class="reports-header-tools mb-3">
+            <div class="reports-header-title">
+              <h3 class="card-title">📊 Báo Cáo Tài Chính Chuyên Nghiệp</h3>
+              <p class="card-subtitle">Phân tích dòng tiền, sức khỏe tài chính & quản trị ngân sách</p>
+            </div>
+            <div class="reports-export-actions">
+              <button type="button" id="btn-export-csv" class="btn btn-secondary btn-sm">
+                <span>📥 Xuất Excel/CSV</span>
+              </button>
+              <button type="button" id="btn-print-pdf" class="btn btn-primary btn-sm">
+                <span>🖨️ In / Xuất PDF</span>
+              </button>
+            </div>
+          </div>
+
           <div class="reports-filter-bar">
             <div class="form-group filter-group flex-1">
               <label for="chart-date-range" class="form-label">Khoảng thời gian báo cáo</label>
@@ -297,13 +312,25 @@
           </div>
         </div>
 
-        <!-- 2. Financial Health Indicator Summary Cards (4 KPI Cards) -->
+        <!-- 2. Smart Executive Summary (Đánh giá tài chính tự động) -->
+        <div class="card smart-summary-card mb-3">
+          <div class="smart-summary-header">
+            <span class="smart-summary-badge">💡 Nhận Xét Quản Trị</span>
+            <span id="financial-health-badge" class="health-score-badge">Đang đánh giá...</span>
+          </div>
+          <div id="smart-executive-summary-text" class="smart-summary-body">
+            Đang phân tích dữ liệu tài chính của bạn...
+          </div>
+        </div>
+
+        <!-- 3. Financial Health Indicator Summary Cards (6 KPI Cards Grid) -->
         <div class="reports-summary-cards">
           <div class="summary-card card-income">
             <div class="card-icon">💰</div>
             <div class="card-info">
               <span class="summary-label">Tổng Thu</span>
               <span id="total-income" class="summary-value income-text">0 ₫</span>
+              <span id="income-mom" class="mom-badge">--</span>
             </div>
           </div>
           <div class="summary-card card-expense">
@@ -311,13 +338,15 @@
             <div class="card-info">
               <span class="summary-label">Tổng Chi</span>
               <span id="total-expense" class="summary-value expense-text">0 ₫</span>
+              <span id="expense-mom" class="mom-badge">--</span>
             </div>
           </div>
           <div class="summary-card card-balance">
             <div class="card-icon">⚖️</div>
             <div class="card-info">
-              <span class="summary-label">Số Dư Còn Lại</span>
+              <span class="summary-label">Số Dư Ròng</span>
               <span id="net-balance" class="summary-value">0 ₫</span>
+              <span id="balance-mom" class="mom-badge">--</span>
             </div>
           </div>
           <div class="summary-card card-savings">
@@ -325,15 +354,48 @@
             <div class="card-info">
               <span class="summary-label">Tỷ Lệ Tiết Kiệm</span>
               <span id="savings-rate" class="summary-value">0.0%</span>
+              <span id="savings-mom" class="mom-badge">--</span>
+            </div>
+          </div>
+          <div class="summary-card card-forecast">
+            <div class="card-icon">📈</div>
+            <div class="card-info">
+              <span class="summary-label">Dự Báo Cuối Tháng</span>
+              <span id="monthly-forecast" class="summary-value">0 ₫</span>
+              <span id="daily-burnrate" class="sub-value">Tốc độ tiêu dùng: 0 ₫/ngày</span>
+            </div>
+          </div>
+          <div class="summary-card card-emergency">
+            <div class="card-icon">🛡️</div>
+            <div class="card-info">
+              <span class="summary-label">Quỹ Dự Phòng</span>
+              <span id="emergency-fund-months" class="summary-value">0.0 tháng</span>
+              <span id="emergency-status" class="sub-value">Số dư duy trì cuộc sống</span>
             </div>
           </div>
         </div>
 
-        <!-- 3. Visual Charts Grid Container -->
-        <div class="charts-container">
+        <!-- 4. Cash Flow & Trend Analysis Chart (Full Width Chart) -->
+        <div class="card chart-card mb-3">
+          <div class="chart-card-header">
+            <div>
+              <h4 class="chart-title">📈 Biểu Đồ Dòng Tiền & Xu Hướng Tích Lũy</h4>
+              <p class="chart-subtitle">Biến thiên Thu nhập, Chi tiêu và Tích lũy số dư ròng theo thời gian</p>
+            </div>
+          </div>
+          <div class="chart-wrapper chart-wrapper--lg">
+            <canvas id="trend-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- 5. Visual Charts Grid (Category Breakdown & Income vs Expense) -->
+        <div class="charts-container mb-3">
           <div class="card chart-card">
             <div class="chart-card-header">
-              <h4 class="chart-title">Cơ Cấu Hạng Mục</h4>
+              <div>
+                <h4 class="chart-title">Cơ Cấu Hạng Mục</h4>
+                <p class="chart-subtitle" style="font-size:0.75rem; color:var(--color-text-secondary);">💡 Nhấp vào biểu đồ để xem chi tiết giao dịch</p>
+              </div>
               <div class="chart-type-toggle" role="radiogroup" aria-label="Loại hạng mục biểu đồ">
                 <button type="button" class="btn-toggle active" data-chart-category-type="expense">Chi tiêu</button>
                 <button type="button" class="btn-toggle" data-chart-category-type="income">Thu nhập</button>
@@ -349,6 +411,26 @@
             </div>
             <div class="chart-wrapper">
               <canvas id="income-expense-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Financial Health Allocation (50/30/20 Rule) & Pareto Outliers -->
+        <div class="charts-container">
+          <div class="card chart-card">
+            <div class="chart-card-header">
+              <h4 class="chart-title">🎯 Phân Bổ Quy Tắc Tài Chính 50/30/20</h4>
+            </div>
+            <div id="rule-503020-container" class="rule-503020-body">
+              <!-- Dynamic 50/30/20 breakdown bars -->
+            </div>
+          </div>
+          <div class="card chart-card">
+            <div class="chart-card-header">
+              <h4 class="chart-title">🔥 Top 5 Khoản Chi Lớn Nhất (Outliers)</h4>
+            </div>
+            <div id="top-expenses-container" class="top-expenses-body">
+              <!-- Dynamic Top Expenses list -->
             </div>
           </div>
         </div>
@@ -652,6 +734,26 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal: Category Drill-down Details -->
+  <div id="modal-drilldown" class="modal-backdrop" hidden aria-hidden="true">
+    <div class="modal-dialog card modal-dialog-lg" role="dialog" aria-labelledby="drilldown-modal-title">
+      <div class="modal-header">
+        <div>
+          <h3 id="drilldown-modal-title" class="modal-title">Chi Tiết Hạng Mục</h3>
+          <p id="drilldown-modal-subtitle" class="card-subtitle">Danh sách các giao dịch thuộc hạng mục</p>
+        </div>
+        <button type="button" class="modal-close-btn" data-close-modal="drilldown" aria-label="Đóng">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="drilldown-summary-bar" class="drilldown-summary-bar mb-3"></div>
+        <div id="drilldown-tx-list" class="drilldown-tx-list"></div>
+      </div>
+      <div class="modal-footer form-actions">
+        <button type="button" class="btn btn-secondary" data-close-modal="drilldown">Đóng</button>
+      </div>
     </div>
   </div>
 
