@@ -135,11 +135,12 @@ const ThemeEngine = {
    -------------------------------------------------------------------------- */
 const Router = {
   DEFAULT_ROUTE: 'transactions',
-  ROUTES: ['transactions', 'budget', 'reports', 'settings'],
+  ROUTES: ['transactions', 'budget', 'reports', 'networth', 'settings'],
   TITLES: {
     transactions: 'Giao dịch',
     budget: 'Ngân sách',
     reports: 'Báo cáo',
+    networth: 'Tài sản ròng',
     settings: 'Cài đặt'
   },
   hooks: {},
@@ -723,8 +724,369 @@ const CategoryTreeManager = {
 };
 
 /* --------------------------------------------------------------------------
-   Master App Initializer
+   Net Worth & Enterprise Accounting UI Manager
    -------------------------------------------------------------------------- */
+const NetWorthManager = {
+  renderNetWorthView() {
+    if (typeof document === 'undefined') return;
+    const db = window.DB;
+    if (!db) return;
+
+    // 1. KPI Cards
+    const nw = db.calculateNetWorth();
+    const assetsEl = document.getElementById('nw-total-assets');
+    const liabEl = document.getElementById('nw-total-liabilities');
+    const nwEl = document.getElementById('nw-net-worth');
+
+    if (assetsEl) assetsEl.textContent = db.formatVND(nw.totalAssets);
+    if (liabEl) liabEl.textContent = db.formatVND(nw.totalLiabilities);
+    if (nwEl) {
+      nwEl.textContent = db.formatVND(nw.netWorth);
+      nwEl.className = nw.netWorth < 0 ? 'summary-value negative-balance' : 'summary-value positive-balance';
+    }
+
+    // 2. Assets List
+    const assets = db.getAssets();
+    const assetContainer = document.getElementById('assets-list-container');
+    if (assetContainer) {
+      if (assets.length === 0) {
+        assetContainer.innerHTML = '<p class="empty-list-msg">Chưa có tài sản nào được lưu.</p>';
+      } else {
+        let html = '<ul class="asset-items-list">';
+        assets.forEach(a => {
+          html += `
+            <li class="asset-item">
+              <div class="asset-main">
+                <strong>${a.name}</strong>
+                <span class="asset-cat-tag">${a.category}</span>
+              </div>
+              <div class="asset-val-box">
+                <span class="asset-val-text">${db.formatVND(a.value)}</span>
+                <button type="button" class="btn-delete-asset" data-delete-asset="${a.id}">&times;</button>
+              </div>
+            </li>
+          `;
+        });
+        html += '</ul>';
+        assetContainer.innerHTML = html;
+      }
+    }
+
+    // 3. Liabilities List
+    const liabilities = db.getLiabilities();
+    const liabContainer = document.getElementById('liabilities-list-container');
+    if (liabContainer) {
+      if (liabilities.length === 0) {
+        liabContainer.innerHTML = '<p class="empty-list-msg">Không có khoản nợ nào.</p>';
+      } else {
+        let html = '<ul class="asset-items-list">';
+        liabilities.forEach(l => {
+          html += `
+            <li class="asset-item">
+              <div class="asset-main">
+                <strong>${l.name}</strong>
+                <span class="asset-cat-tag">${l.category}</span>
+              </div>
+              <div class="asset-val-box">
+                <span class="asset-val-text expense-text">${db.formatVND(l.remaining_debt)}</span>
+                <button type="button" class="btn-delete-liab" data-delete-liab="${l.id}">&times;</button>
+              </div>
+            </li>
+          `;
+        });
+        html += '</ul>';
+        liabContainer.innerHTML = html;
+      }
+    }
+
+    // 4. Loans & Debts List
+    const loans = db.getLoans();
+    const loanContainer = document.getElementById('loans-list-container');
+    if (loanContainer) {
+      if (loans.length === 0) {
+        loanContainer.innerHTML = '<p class="empty-list-msg">Chưa có hợp đồng vay hoặc cho vay nào.</p>';
+      } else {
+        let html = '<div class="loans-grid">';
+        loans.forEach(l => {
+          const isLoan = l.type === 'loan';
+          const typeBadge = isLoan ? '🤝 Cho vay' : '💸 Đi vay';
+          const badgeClass = isLoan ? 'badge-income' : 'badge-expense';
+
+          html += `
+            <div class="loan-card">
+              <div class="loan-card-header">
+                <div>
+                  <strong>${l.person_name}</strong>
+                  <span class="loan-type-badge ${badgeClass}">${typeBadge}</span>
+                </div>
+                <span class="loan-status ${l.status === 'paid' ? 'status-paid' : 'status-active'}">
+                  ${l.status === 'paid' ? '✅ Đã xong' : '⏳ Đang trả'}
+                </span>
+              </div>
+              <div class="loan-card-body">
+                <span>Còn lại: <strong class="${isLoan ? 'income-text' : 'expense-text'}">${db.formatVND(l.remaining_amount)}</strong> / ${db.formatVND(l.original_amount)}</span>
+                ${l.due_date ? `<span class="loan-due">Hạn: ${l.due_date}</span>` : ''}
+              </div>
+              ${l.status !== 'paid' ? `
+                <div class="loan-card-footer">
+                  <button type="button" class="btn btn-secondary btn-sm" data-repay-loan="${l.id}">💸 Trả gốc & lãi</button>
+                  <button type="button" class="btn-delete-loan" data-delete-loan="${l.id}">&times;</button>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        });
+        html += '</div>';
+        loanContainer.innerHTML = html;
+      }
+    }
+  },
+
+  renderAuditLogs() {
+    const db = window.DB;
+    const container = document.getElementById('audit-log-items-container');
+    if (!db || !container) return;
+
+    const logs = db.getAuditLogs();
+    if (logs.length === 0) {
+      container.innerHTML = '<p class="empty-list-msg">Chưa có lịch sử vết sửa nào.</p>';
+      return;
+    }
+
+    let html = '<div class="audit-timeline">';
+    logs.forEach(l => {
+      const actionMap = {
+        add: '➕ Thêm mới',
+        update: '✏️ Chỉnh sửa',
+        delete: '🗑️ Xóa giao dịch',
+        revert: '🔄 Phục hồi (Revert)'
+      };
+      const timeStr = new Date(l.timestamp).toLocaleString('vi-VN');
+
+      html += `
+        <div class="audit-item audit-action-${l.action}">
+          <div class="audit-header">
+            <span class="audit-action-badge">${actionMap[l.action] || l.action}</span>
+            <span class="audit-time">${timeStr}</span>
+          </div>
+          <div class="audit-details">
+            <span class="audit-entity">ID: ${l.entity_id}</span>
+            ${l.old_data ? `<div class="audit-diff">Cũ: ${l.old_data.category} - ${db.formatVND(l.old_data.amount)} (${l.old_data.note || ''})</div>` : ''}
+            ${l.new_data ? `<div class="audit-diff">Mới: ${l.new_data.category} - ${db.formatVND(l.new_data.amount)} (${l.new_data.note || ''})</div>` : ''}
+          </div>
+          ${l.action !== 'revert' ? `
+            <button type="button" class="btn btn-secondary btn-sm btn-revert-audit" data-revert-audit="${l.id}">🔄 Phục hồi</button>
+          ` : ''}
+        </div>
+      `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  },
+
+  renderRecurringItems() {
+    const db = window.DB;
+    const container = document.getElementById('recurring-items-list');
+    if (!db || !container) return;
+
+    const items = db.getRecurring();
+    if (items.length === 0) {
+      container.innerHTML = '<p class="empty-list-msg">Chưa có lịch thu chi định kỳ nào.</p>';
+      return;
+    }
+
+    let html = '<ul class="recurring-list">';
+    items.forEach(r => {
+      html += `
+        <li class="recurring-item">
+          <div>
+            <strong>${r.category}</strong> (${r.type === 'income' ? 'Thu' : 'Chi'})
+            <span class="rec-note">Ngày ${r.day_of_month} hàng tháng • ${r.note || 'Không có ghi chú'}</span>
+          </div>
+          <div class="rec-right">
+            <span class="${r.type === 'income' ? 'income-text' : 'expense-text'}">${db.formatVND(r.amount)}</span>
+            <button type="button" class="btn-delete-rec" data-delete-rec="${r.id}">&times;</button>
+          </div>
+        </li>
+      `;
+    });
+    html += '</ul>';
+    container.innerHTML = html;
+  },
+
+  initEventListeners() {
+    if (typeof document === 'undefined') return;
+
+    // Route hooks
+    Router.on('networth', () => this.renderNetWorthView());
+
+    // Modal open buttons
+    document.getElementById('btn-open-add-asset')?.addEventListener('click', () => {
+      document.getElementById('modal-asset')?.removeAttribute('hidden');
+    });
+
+    document.getElementById('btn-open-add-liab')?.addEventListener('click', () => {
+      document.getElementById('modal-liability')?.removeAttribute('hidden');
+    });
+
+    document.getElementById('btn-open-add-loan')?.addEventListener('click', () => {
+      document.getElementById('modal-loan')?.removeAttribute('hidden');
+    });
+
+    document.getElementById('btn-open-audit-log')?.addEventListener('click', () => {
+      this.renderAuditLogs();
+      document.getElementById('modal-audit')?.removeAttribute('hidden');
+    });
+
+    document.getElementById('btn-open-recurring')?.addEventListener('click', () => {
+      this.renderRecurringItems();
+      document.getElementById('modal-recurring')?.removeAttribute('hidden');
+    });
+
+    // Close modal triggers
+    ['asset', 'liability', 'loan', 'recurring', 'audit'].forEach(name => {
+      document.querySelectorAll(`[data-close-modal="${name}"]`).forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.getElementById(`modal-${name}`)?.setAttribute('hidden', '');
+        });
+      });
+    });
+
+    // Asset Form submit
+    document.getElementById('form-asset')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const db = window.DB;
+      if (!db) return;
+      const name = document.getElementById('asset-name')?.value;
+      const category = document.getElementById('asset-category')?.value;
+      const value = document.getElementById('asset-value')?.value;
+      const note = document.getElementById('asset-note')?.value;
+
+      db.saveAsset({ name, category, value, note });
+      document.getElementById('modal-asset')?.setAttribute('hidden', '');
+      this.renderNetWorthView();
+      Toast.show('Đã lưu tài sản mới thành công', 'success');
+    });
+
+    // Liability Form submit
+    document.getElementById('form-liability')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const db = window.DB;
+      if (!db) return;
+      const name = document.getElementById('liab-name')?.value;
+      const category = document.getElementById('liab-category')?.value;
+      const remaining_debt = document.getElementById('liab-remaining')?.value;
+      const note = document.getElementById('liab-note')?.value;
+
+      db.saveLiability({ name, category, remaining_debt, note });
+      document.getElementById('modal-liability')?.setAttribute('hidden', '');
+      this.renderNetWorthView();
+      Toast.show('Đã lưu khoản nợ thành công', 'success');
+    });
+
+    // Loan Form submit
+    document.getElementById('form-loan')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const db = window.DB;
+      if (!db) return;
+      const type = document.querySelector('input[name="loan-type"]:checked')?.value || 'loan';
+      const person_name = document.getElementById('loan-person')?.value;
+      const original_amount = document.getElementById('loan-amount')?.value;
+      const due_date = document.getElementById('loan-due-date')?.value;
+      const note = document.getElementById('loan-note')?.value;
+
+      db.saveLoan({ type, person_name, original_amount, due_date, note });
+      document.getElementById('modal-loan')?.setAttribute('hidden', '');
+      this.renderNetWorthView();
+      Toast.show('Đã lưu sổ vay mượn mới', 'success');
+    });
+
+    // Recurring Form submit
+    document.getElementById('form-add-recurring')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const db = window.DB;
+      if (!db) return;
+      const type = document.getElementById('rec-type')?.value;
+      const amount = document.getElementById('rec-amount')?.value;
+      const category = document.getElementById('rec-category')?.value;
+      const day_of_month = document.getElementById('rec-day')?.value;
+      const note = document.getElementById('rec-note')?.value;
+
+      db.saveRecurring({ type, amount, category, day_of_month, note });
+      this.renderRecurringItems();
+      Toast.show('Đã lưu lịch thu chi định kỳ', 'success');
+    });
+
+    // Delegation clicks for delete asset, delete liability, delete loan, repay loan, revert audit log
+    document.addEventListener('click', (e) => {
+      const db = window.DB;
+      if (!db) return;
+
+      const delAsset = e.target?.closest('[data-delete-asset]');
+      if (delAsset) {
+        const id = delAsset.getAttribute('data-delete-asset');
+        db.deleteAsset(id);
+        this.renderNetWorthView();
+        Toast.show('Đã xóa tài sản', 'info');
+      }
+
+      const delLiab = e.target?.closest('[data-delete-liab]');
+      if (delLiab) {
+        const id = delLiab.getAttribute('data-delete-liab');
+        db.deleteLiability(id);
+        this.renderNetWorthView();
+        Toast.show('Đã xóa khoản nợ', 'info');
+      }
+
+      const delLoan = e.target?.closest('[data-delete-loan]');
+      if (delLoan) {
+        const id = delLoan.getAttribute('data-delete-loan');
+        db.deleteLoan(id);
+        this.renderNetWorthView();
+        Toast.show('Đã xóa sổ vay', 'info');
+      }
+
+      const repayLoan = e.target?.closest('[data-repay-loan]');
+      if (repayLoan) {
+        const id = repayLoan.getAttribute('data-repay-loan');
+        const loans = db.getLoans();
+        const target = loans.find(l => l.id === id);
+        if (target) {
+          const principal = prompt(`Nhập số tiền gốc hoàn trả cho ${target.person_name} (VND):`, target.remaining_amount);
+          if (principal !== null && !isNaN(Number(principal)) && Number(principal) > 0) {
+            const interest = prompt('Nhập số tiền lãi (VND) (nếu có, không có thì nhập 0):', '0') || 0;
+            db.recordLoanRepayment(id, { principal: Number(principal), interest: Number(interest) });
+            this.renderNetWorthView();
+            Toast.show('Đã ghi nhận thanh toán thành công', 'success');
+          }
+        }
+      }
+
+      const delRec = e.target?.closest('[data-delete-rec]');
+      if (delRec) {
+        const id = delRec.getAttribute('data-delete-rec');
+        db.deleteRecurring(id);
+        this.renderRecurringItems();
+        Toast.show('Đã xóa lịch định kỳ', 'info');
+      }
+
+      const revertAudit = e.target?.closest('[data-revert-audit]');
+      if (revertAudit) {
+        const id = revertAudit.getAttribute('data-revert-audit');
+        try {
+          db.revertAuditEvent(id);
+          this.renderAuditLogs();
+          this.renderNetWorthView();
+          window.dispatchEvent(new CustomEvent('transactionupdated'));
+          Toast.show('Đã phục hồi (revert) bản ghi thành công', 'success');
+        } catch (err) {
+          Toast.show(err.message || 'Không thể phục hồi bản ghi', 'error');
+        }
+      }
+    });
+  }
+};
+
 const App = {
   init() {
     try {
@@ -747,6 +1109,16 @@ const App = {
       getModule('HistoryUI', 'HistoryManager')?.initEventListeners?.();
       getModule('ChartsUI', 'Charts')?.initEventListeners?.();
       CategoryTreeManager.initEventListeners();
+      NetWorthManager.initEventListeners();
+
+      // Check automated recurring transactions
+      setTimeout(() => {
+        const genCount = window.DB?.checkAndGenerateRecurringTransactions?.();
+        if (genCount > 0) {
+          Toast.show(`⚡ Tự động phát sinh ${genCount} giao dịch định kỳ hôm nay`, 'info');
+          window.dispatchEvent(new CustomEvent('transactionadded'));
+        }
+      }, 1000);
 
     } catch (err) {
       console.warn('[App] Initialization warning:', err);
@@ -758,12 +1130,12 @@ const App = {
    Global Exports
    -------------------------------------------------------------------------- */
 Object.assign(window, {
-  App, ThemeEngine, Router, TransactionForm, CategoryTreeManager, Toast,
+  App, ThemeEngine, Router, TransactionForm, CategoryTreeManager, NetWorthManager, Toast,
   parseRawAmount, formatVNDInput, numberToVietnameseWords
 });
 if (typeof globalThis !== 'undefined') {
   Object.assign(globalThis, {
-    App, ThemeEngine, Router, TransactionForm, CategoryTreeManager, Toast,
+    App, ThemeEngine, Router, TransactionForm, CategoryTreeManager, NetWorthManager, Toast,
     parseRawAmount, formatVNDInput, numberToVietnameseWords
   });
 }

@@ -82,6 +82,12 @@
           </a>
         </li>
         <li class="nav-item">
+          <a href="#networth" id="nav-networth" class="nav-link" data-view="networth" role="tab" aria-selected="false">
+            <span class="nav-icon">🏢</span>
+            <span class="nav-label">Tài sản</span>
+          </a>
+        </li>
+        <li class="nav-item">
           <a href="#settings" id="nav-settings" class="nav-link" data-view="settings" role="tab" aria-selected="false">
             <span class="nav-icon">⚙️</span>
             <span class="nav-label">Cài đặt</span>
@@ -436,6 +442,90 @@
         </div>
       </section>
 
+      <!-- Section: Net Worth & Balance Sheet View -->
+      <section id="view-networth" class="view-panel" data-view-content="networth" data-route="networth">
+        <div class="card reports-filter-card mb-3">
+          <div class="reports-header-tools">
+            <div class="reports-header-title">
+              <h3 class="card-title">🏢 Bảng Cân Đối Tài Sản & Quản Lý Nợ</h3>
+              <p class="card-subtitle">Theo dõi Tài sản ròng, Khoản cho vay, Nợ phải trả và Nhật ký Audit Log</p>
+            </div>
+            <div class="reports-export-actions">
+              <button type="button" id="btn-open-audit-log" class="btn btn-secondary btn-sm">
+                <span>📜 Nhật Ký Audit Log</span>
+              </button>
+              <button type="button" id="btn-open-recurring" class="btn btn-primary btn-sm">
+                <span>🔄 Thu Chi Định Kỳ</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Net Worth KPI Summary Cards -->
+        <div class="reports-summary-cards mb-3">
+          <div class="summary-card card-income">
+            <div class="card-icon">🏦</div>
+            <div class="card-info">
+              <span class="summary-label">Tổng Tài Sản (Assets)</span>
+              <span id="nw-total-assets" class="summary-value income-text">0 ₫</span>
+            </div>
+          </div>
+          <div class="summary-card card-expense">
+            <div class="card-icon">💳</div>
+            <div class="card-info">
+              <span class="summary-label">Tổng Nợ (Liabilities)</span>
+              <span id="nw-total-liabilities" class="summary-value expense-text">0 ₫</span>
+            </div>
+          </div>
+          <div class="summary-card card-balance">
+            <div class="card-icon">💎</div>
+            <div class="card-info">
+              <span class="summary-label">Tài Sản Ròng (Net Worth)</span>
+              <span id="nw-net-worth" class="summary-value">0 ₫</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Assets & Liabilities Management Grid -->
+        <div class="charts-container mb-3">
+          <!-- Assets Card -->
+          <div class="card chart-card">
+            <div class="chart-card-header card-header--spaced">
+              <h4 class="chart-title">🏦 Danh Mục Tài Sản</h4>
+              <button type="button" id="btn-open-add-asset" class="btn btn-primary btn-sm">➕ Thêm Tài Sản</button>
+            </div>
+            <div id="assets-list-container" class="assets-list-container">
+              <!-- Dynamic Assets List -->
+            </div>
+          </div>
+
+          <!-- Liabilities Card -->
+          <div class="card chart-card">
+            <div class="chart-card-header card-header--spaced">
+              <h4 class="chart-title">💳 Danh Mục Nợ Phải Trả</h4>
+              <button type="button" id="btn-open-add-liab" class="btn btn-secondary btn-sm">➕ Thêm Khoản Nợ</button>
+            </div>
+            <div id="liabilities-list-container" class="liabilities-list-container">
+              <!-- Dynamic Liabilities List -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Loans & Debts Management Card -->
+        <div class="card chart-card mb-3">
+          <div class="chart-card-header card-header--spaced">
+            <div>
+              <h4 class="chart-title">🤝 Sổ Vay & Cho Vay (Debts & Loans Tracker)</h4>
+              <p class="chart-subtitle">Theo dõi tiền cho vay (Khoản phải thu) và tiền đi vay (Khoản phải trả)</p>
+            </div>
+            <button type="button" id="btn-open-add-loan" class="btn btn-primary btn-sm">➕ Thêm Khoản Vay/Cho Vay</button>
+          </div>
+          <div id="loans-list-container" class="loans-list-container">
+            <!-- Dynamic Loans & Debts List -->
+          </div>
+        </div>
+      </section>
+
       <!-- Section: Settings View -->
       <section id="view-settings" class="view-panel" data-view-content="settings" data-route="settings">
         <div class="card settings-card">
@@ -753,6 +843,200 @@
       </div>
       <div class="modal-footer form-actions">
         <button type="button" class="btn btn-secondary" data-close-modal="drilldown">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Asset Add/Edit -->
+  <div id="modal-asset" class="modal-backdrop" hidden aria-hidden="true">
+    <div class="modal-dialog card" role="dialog" aria-labelledby="asset-modal-title">
+      <div class="modal-header">
+        <h3 id="asset-modal-title" class="modal-title">Thêm / Sửa Tài Sản</h3>
+        <button type="button" class="modal-close-btn" data-close-modal="asset" aria-label="Đóng">&times;</button>
+      </div>
+      <form id="form-asset" class="modal-body transaction-form">
+        <input type="hidden" id="asset-id" name="id">
+        <div class="form-group">
+          <label for="asset-name" class="form-label">Tên tài sản <span class="required-star">*</span></label>
+          <input type="text" id="asset-name" class="form-control" placeholder="Ví dụ: Sổ tiết kiệm VCB, Căn hộ A..." required>
+        </div>
+        <div class="form-group">
+          <label for="asset-category" class="form-label">Phân loại tài sản</label>
+          <select id="asset-category" class="form-control">
+            <option value="Tài khoản ngân hàng">🏦 Tài khoản ngân hàng</option>
+            <option value="Sổ tiết kiệm">💰 Sổ tiết kiệm</option>
+            <option value="Bất động sản">🏡 Bất động sản</option>
+            <option value="Vàng / Đầu tư">📈 Vàng / Cổ phiếu / Đầu tư</option>
+            <option value="Tiền mặt">💵 Tiền mặt</option>
+            <option value="Xe cộ / Tài sản cố định">🚗 Xe cộ / Đồ dùng giá trị</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="asset-value" class="form-label">Giá trị ước tính (VND) <span class="required-star">*</span></label>
+          <input type="number" id="asset-value" class="form-control" placeholder="0" required min="0">
+        </div>
+        <div class="form-group">
+          <label for="asset-note" class="form-label">Ghi chú</label>
+          <input type="text" id="asset-note" class="form-control" placeholder="Ghi chú thêm...">
+        </div>
+        <div class="modal-footer form-actions">
+          <button type="button" class="btn btn-secondary" data-close-modal="asset">Hủy</button>
+          <button type="submit" id="btn-save-asset" class="btn btn-primary">Lưu Tài Sản</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Liability Add/Edit -->
+  <div id="modal-liability" class="modal-backdrop" hidden aria-hidden="true">
+    <div class="modal-dialog card" role="dialog" aria-labelledby="liability-modal-title">
+      <div class="modal-header">
+        <h3 id="liability-modal-title" class="modal-title">Thêm / Sửa Khoản Nợ Phải Trả</h3>
+        <button type="button" class="modal-close-btn" data-close-modal="liability" aria-label="Đóng">&times;</button>
+      </div>
+      <form id="form-liability" class="modal-body transaction-form">
+        <input type="hidden" id="liab-id" name="id">
+        <div class="form-group">
+          <label for="liab-name" class="form-label">Tên khoản nợ <span class="required-star">*</span></label>
+          <input type="text" id="liab-name" class="form-control" placeholder="Ví dụ: Dư nợ thẻ HSBC, Vay mua nhà..." required>
+        </div>
+        <div class="form-group">
+          <label for="liab-category" class="form-label">Phân loại nợ</label>
+          <select id="liab-category" class="form-control">
+            <option value="Thẻ tín dụng">💳 Thẻ tín dụng</option>
+            <option value="Vay ngân hàng mua nhà/xe">🏦 Vay ngân hàng mua nhà / xe</option>
+            <option value="Nợ cá nhân">👤 Nợ cá nhân / Người quen</option>
+            <option value="Vay tiêu dùng">⚡ Vay tiêu dùng / Trả góp</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="liab-remaining" class="form-label">Dư nợ còn lại (VND) <span class="required-star">*</span></label>
+          <input type="number" id="liab-remaining" class="form-control" placeholder="0" required min="0">
+        </div>
+        <div class="form-group">
+          <label for="liab-note" class="form-label">Ghi chú</label>
+          <input type="text" id="liab-note" class="form-control" placeholder="Ghi chú thêm...">
+        </div>
+        <div class="modal-footer form-actions">
+          <button type="button" class="btn btn-secondary" data-close-modal="liability">Hủy</button>
+          <button type="submit" id="btn-save-liability" class="btn btn-primary">Lưu Khoản Nợ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Loan / Debt Tracker Add -->
+  <div id="modal-loan" class="modal-backdrop" hidden aria-hidden="true">
+    <div class="modal-dialog card" role="dialog" aria-labelledby="loan-modal-title">
+      <div class="modal-header">
+        <h3 id="loan-modal-title" class="modal-title">Sổ Vay & Cho Vay</h3>
+        <button type="button" class="modal-close-btn" data-close-modal="loan" aria-label="Đóng">&times;</button>
+      </div>
+      <form id="form-loan" class="modal-body transaction-form">
+        <input type="hidden" id="loan-id" name="id">
+        <div class="form-group">
+          <label class="form-label">Loại hợp đồng vay</label>
+          <div class="type-toggle-container">
+            <input type="radio" id="loan-type-loan" name="loan-type" value="loan" checked class="type-radio-input">
+            <label for="loan-type-loan" class="type-toggle-btn type-btn-income">
+              <span>🤝 Cho vay (Khoản phải thu)</span>
+            </label>
+            <input type="radio" id="loan-type-debt" name="loan-type" value="debt" class="type-radio-input">
+            <label for="loan-type-debt" class="type-toggle-btn type-btn-expense">
+              <span>💸 Đi vay (Khoản phải trả)</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="loan-person" class="form-label">Tên đối tác / Người vay/cho vay <span class="required-star">*</span></label>
+          <input type="text" id="loan-person" class="form-control" placeholder="Ví dụ: Anh Nam, VCB, Công ty A..." required>
+        </div>
+        <div class="form-group">
+          <label for="loan-amount" class="form-label">Số tiền ban đầu (VND) <span class="required-star">*</span></label>
+          <input type="number" id="loan-amount" class="form-control" placeholder="0" required min="0">
+        </div>
+        <div class="form-group">
+          <label for="loan-due-date" class="form-label">Hạn hoàn trả</label>
+          <input type="date" id="loan-due-date" class="form-control">
+        </div>
+        <div class="form-group">
+          <label for="loan-note" class="form-label">Ghi chú</label>
+          <input type="text" id="loan-note" class="form-control" placeholder="Ghi chú vay mượn...">
+        </div>
+        <div class="modal-footer form-actions">
+          <button type="button" class="btn btn-secondary" data-close-modal="loan">Hủy</button>
+          <button type="submit" id="btn-save-loan" class="btn btn-primary">Lưu Sổ Vay</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Recurring Transactions Management -->
+  <div id="modal-recurring" class="modal-backdrop" hidden aria-hidden="true">
+    <div class="modal-dialog card modal-dialog-lg" role="dialog" aria-labelledby="recurring-modal-title">
+      <div class="modal-header">
+        <h3 id="recurring-modal-title" class="modal-title">🔄 Thu Chi Định Kỳ Tự Động</h3>
+        <button type="button" class="modal-close-btn" data-close-modal="recurring" aria-label="Đóng">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-add-recurring" class="transaction-form mb-4 border-bottom pb-3">
+          <h4 class="form-label-sm mb-2">Thêm lịch thu chi định kỳ mới:</h4>
+          <div class="filter-row">
+            <div class="form-group flex-1">
+              <label for="rec-type" class="form-label-sm">Loại</label>
+              <select id="rec-type" class="form-control">
+                <option value="expense" selected>💸 Chi tiêu</option>
+                <option value="income">💰 Thu nhập</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="rec-amount" class="form-label-sm">Số tiền <span class="required-star">*</span></label>
+              <input type="number" id="rec-amount" class="form-control" placeholder="0" required min="0">
+            </div>
+          </div>
+          <div class="filter-row">
+            <div class="form-group flex-1">
+              <label for="rec-category" class="form-label-sm">Hạng mục</label>
+              <input type="text" id="rec-category" class="form-control" placeholder="Ví dụ: Tiền nhà, Lương..." required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="rec-day" class="form-label-sm">Ngày hàng tháng (1-31)</label>
+              <input type="number" id="rec-day" class="form-control" value="1" min="1" max="31" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="rec-note" class="form-label-sm">Ghi chú</label>
+            <input type="text" id="rec-note" class="form-control" placeholder="Tự động phát sinh hàng tháng...">
+          </div>
+          <button type="submit" id="btn-save-recurring" class="btn btn-primary btn-sm">➕ Lưu Lịch Định Kỳ</button>
+        </form>
+        <div id="recurring-items-list" class="recurring-items-list">
+          <!-- Dynamic recurring items -->
+        </div>
+      </div>
+      <div class="modal-footer form-actions">
+        <button type="button" class="btn btn-secondary" data-close-modal="recurring">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Audit Log Trail & Revert -->
+  <div id="modal-audit" class="modal-backdrop" hidden aria-hidden="true">
+    <div class="modal-dialog card modal-dialog-lg" role="dialog" aria-labelledby="audit-modal-title">
+      <div class="modal-header">
+        <div>
+          <h3 id="audit-modal-title" class="modal-title">📜 Nhật Ký Audit Log (Lưu Vết Kế Toán)</h3>
+          <p class="card-subtitle">Xem lại lịch sử Thêm/Sửa/Xóa và khôi phục (Revert) bản ghi cũ</p>
+        </div>
+        <button type="button" class="modal-close-btn" data-close-modal="audit" aria-label="Đóng">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="audit-log-items-container" class="audit-log-items-container">
+          <!-- Dynamic audit log entries -->
+        </div>
+      </div>
+      <div class="modal-footer form-actions">
+        <button type="button" class="btn btn-secondary" data-close-modal="audit">Đóng</button>
       </div>
     </div>
   </div>

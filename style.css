@@ -2324,6 +2324,207 @@ optgroup option {
   font-size: 0.9rem;
 }
 
+/* Net Worth & Assets/Liabilities Styling */
+.asset-items-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.asset-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.asset-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.asset-cat-tag {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}
+
+.asset-val-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.asset-val-text {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.btn-delete-asset,
+.btn-delete-liab,
+.btn-delete-loan,
+.btn-delete-rec {
+  background: none;
+  border: none;
+  color: var(--expense-color);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  line-height: 1;
+}
+
+/* Loans Grid */
+.loans-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .loans-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.loan-card {
+  padding: 0.85rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.loan-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.loan-type-badge {
+  font-size: 0.68rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.3rem;
+  font-weight: 600;
+}
+
+.badge-income { background: rgba(16, 185, 129, 0.15); color: #059669; }
+.badge-expense { background: rgba(239, 68, 68, 0.15); color: #dc2626; }
+
+.loan-status {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.status-paid { color: #10b981; }
+.status-active { color: #f59e0b; }
+
+.loan-card-body {
+  font-size: 0.82rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.loan-due {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.loan-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+/* Audit Log Timeline */
+.audit-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.audit-item {
+  padding: 0.75rem;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--color-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.audit-action-add { border-left-color: #10b981; }
+.audit-action-update { border-left-color: #3b82f6; }
+.audit-action-delete { border-left-color: #ef4444; }
+.audit-action-revert { border-left-color: #8b5cf6; }
+
+.audit-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.audit-time {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  font-weight: normal;
+}
+
+.audit-details {
+  font-size: 0.78rem;
+  color: var(--color-text-primary);
+}
+
+.audit-diff {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+/* Recurring Items List */
+.recurring-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.recurring-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  font-size: 0.85rem;
+}
+
+.rec-note {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.rec-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 /* Native Print Styles (@media print) */
 @media print {
   body {
