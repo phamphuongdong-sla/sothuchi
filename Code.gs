@@ -399,59 +399,111 @@ function handleVerifyOtp(payload) {
 }
 
 /**
- * Shared syncBatch processor used for Sheet "GiaoDich"
+ * Shared syncBatch processor used for all Sheets (GiaoDich, TaiSan, KhoanNo, SoVay, NhatKyAudit)
  */
-function processSyncBatch(txs) {
-  const sheet = getOrCreateNamedSheet(SHEET_TX, HEADERS_TX);
-  const syncedIds = [];
-  if (!txs || !Array.isArray(txs) || txs.length === 0) {
-    return responseJSON({ status: 'success', synced_ids: [] });
+function processSyncBatch(payload) {
+  let txs = [];
+  let assets = null;
+  let liabilities = null;
+  let loans = null;
+  let auditLogs = null;
+
+  if (Array.isArray(payload)) {
+    txs = payload;
+  } else if (payload && typeof payload === 'object') {
+    txs = payload.transactions || [];
+    assets = payload.assets || null;
+    liabilities = payload.liabilities || null;
+    loans = payload.loans || null;
+    auditLogs = payload.auditLogs || null;
   }
 
-  const dataRange = sheet.getDataRange ? sheet.getDataRange() : null;
-  const rows = dataRange && typeof dataRange.getValues === 'function' ? dataRange.getValues() : [];
+  // 1. Process Transactions (Sheet "GiaoDich")
+  const sheetTx = getOrCreateNamedSheet(SHEET_TX, HEADERS_TX);
+  const syncedIds = [];
 
-  const headerRow = (rows && rows.length > 0 && rows[0].length >= 8) ? rows[0] : HEADERS_TX;
-  const existingRowsMap = new Map();
-  if (rows && rows.length > 1) {
-    for (let i = 1; i < rows.length; i++) {
-      if (rows[i] && rows[i][0]) {
-        existingRowsMap.set(String(rows[i][0]), rows[i]);
+  if (txs && Array.isArray(txs) && txs.length > 0) {
+    const dataRange = sheetTx.getDataRange ? sheetTx.getDataRange() : null;
+    const rows = dataRange && typeof dataRange.getValues === 'function' ? dataRange.getValues() : [];
+    const headerRow = (rows && rows.length > 0 && rows[0].length >= 8) ? rows[0] : HEADERS_TX;
+    const existingRowsMap = new Map();
+    if (rows && rows.length > 1) {
+      for (let i = 1; i < rows.length; i++) {
+        if (rows[i] && rows[i][0]) {
+          existingRowsMap.set(String(rows[i][0]), rows[i]);
+        }
       }
     }
-  }
 
-  const nowIso = new Date().toISOString();
+    const nowIso = new Date().toISOString();
+    txs.forEach(function(tx) {
+      if (!tx || !tx.id) return;
+      const txId = String(tx.id);
+      syncedIds.push(tx.id);
 
-  txs.forEach(function(tx) {
-    if (!tx || !tx.id) return;
-    const txId = String(tx.id);
-    syncedIds.push(tx.id);
+      if (tx.sync_status === 'pending_delete') {
+        existingRowsMap.delete(txId);
+      } else {
+        const dateVal = tx.date || nowIso.split('T')[0];
+        const createdAt = tx.created_at || tx.createdAt || nowIso;
+        const updatedAt = tx.updated_at || tx.updatedAt || nowIso;
+        const rowVal = [
+          tx.id, dateVal, tx.type || 'expense', tx.category || 'Khác',
+          Number(tx.amount) || 0, tx.note || '', createdAt, updatedAt
+        ];
+        existingRowsMap.set(txId, rowVal);
+      }
+    });
 
-    if (tx.sync_status === 'pending_delete') {
-      existingRowsMap.delete(txId);
-    } else {
-      const dateVal = tx.date || nowIso.split('T')[0];
-      const createdAt = tx.created_at || tx.createdAt || nowIso;
-      const updatedAt = tx.updated_at || tx.updatedAt || nowIso;
-      const rowVal = [
-        tx.id, dateVal, tx.type || 'expense', tx.category || 'Khác',
-        Number(tx.amount) || 0, tx.note || '', createdAt, updatedAt
-      ];
-      existingRowsMap.set(txId, rowVal);
+    const workingRows = [headerRow];
+    existingRowsMap.forEach(function(rowVal) {
+      workingRows.push(rowVal);
+    });
+
+    if (typeof sheetTx.clearContents === 'function') sheetTx.clearContents();
+    if (typeof sheetTx.getRange === 'function' && workingRows.length > 0) {
+      sheetTx.getRange(1, 1, workingRows.length, 8).setValues(workingRows);
     }
-  });
-
-  const workingRows = [headerRow];
-  existingRowsMap.forEach(function(rowVal) {
-    workingRows.push(rowVal);
-  });
-
-  if (typeof sheet.clearContents === 'function') {
-    sheet.clearContents();
   }
-  if (typeof sheet.getRange === 'function' && workingRows.length > 0) {
-    sheet.getRange(1, 1, workingRows.length, 8).setValues(workingRows);
+
+  // 2. Process Assets (Sheet "TaiSan")
+  if (Array.isArray(assets)) {
+    const sheetAsset = getOrCreateNamedSheet(SHEET_ASSET, HEADERS_ASSET);
+    sheetAsset.clearContents();
+    sheetAsset.appendRow(HEADERS_ASSET);
+    assets.forEach(a => {
+      sheetAsset.appendRow([a.id || '', a.name || '', a.category || '', Number(a.value) || 0, a.note || '', a.updated_at || '']);
+    });
+  }
+
+  // 3. Process Liabilities (Sheet "KhoanNo")
+  if (Array.isArray(liabilities)) {
+    const sheetLiab = getOrCreateNamedSheet(SHEET_LIAB, HEADERS_LIAB);
+    sheetLiab.clearContents();
+    sheetLiab.appendRow(HEADERS_LIAB);
+    liabilities.forEach(l => {
+      sheetLiab.appendRow([l.id || '', l.name || '', l.category || '', Number(l.total_debt) || 0, Number(l.remaining_debt) || 0, l.note || '', l.updated_at || '']);
+    });
+  }
+
+  // 4. Process Loans (Sheet "SoVay")
+  if (Array.isArray(loans)) {
+    const sheetLoan = getOrCreateNamedSheet(SHEET_LOAN, HEADERS_LOAN);
+    sheetLoan.clearContents();
+    sheetLoan.appendRow(HEADERS_LOAN);
+    loans.forEach(l => {
+      sheetLoan.appendRow([l.id || '', l.type || 'loan', l.person_name || '', Number(l.original_amount) || 0, Number(l.remaining_amount) || 0, l.due_date || '', l.status || 'active', l.note || '', l.updated_at || '']);
+    });
+  }
+
+  // 5. Process Audit Logs (Sheet "NhatKyAudit")
+  if (Array.isArray(auditLogs)) {
+    const sheetAudit = getOrCreateNamedSheet(SHEET_AUDIT, HEADERS_AUDIT);
+    sheetAudit.clearContents();
+    sheetAudit.appendRow(HEADERS_AUDIT);
+    auditLogs.forEach(l => {
+      sheetAudit.appendRow([l.id || '', l.action || '', l.entity_type || '', l.entity_id || '', l.timestamp || '', JSON.stringify(l.old_data || ''), JSON.stringify(l.new_data || '')]);
+    });
   }
 
   return responseJSON({

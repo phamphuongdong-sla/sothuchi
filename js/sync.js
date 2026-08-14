@@ -123,18 +123,31 @@
 
       const all = db.getTransactions({ includeDeleted: true });
       const pending = all.filter(t => t.sync_status && t.sync_status !== 'synced');
-      if (!pending.length) {
+      const deduped = Array.from(new Map(pending.map(t => [t.id, t])).values());
+
+      const assets = db.getAssets ? db.getAssets() : [];
+      const liabilities = db.getLiabilities ? db.getLiabilities() : [];
+      const loans = db.getLoans ? db.getLoans() : [];
+      const auditLogs = db.getAuditLogs ? db.getAuditLogs() : [];
+
+      if (!deduped.length && !assets.length && !liabilities.length && !loans.length && !auditLogs.length) {
         this._updateStatus('success');
         return { success: true, syncedCount: 0 };
       }
 
-      // Deduplicate by ID
-      const deduped = Array.from(new Map(pending.map(t => [t.id, t])).values());
-
       this.isSyncing = true;
       this._updateStatus('syncing');
 
-      const payload = JSON.stringify({ action: 'syncBatch', transactions: deduped });
+      const payloadObj = {
+        action: 'syncBatch',
+        transactions: deduped,
+        assets: assets,
+        liabilities: liabilities,
+        loans: loans,
+        auditLogs: auditLogs
+      };
+
+      const payload = JSON.stringify(payloadObj);
       let result = null;
 
       // Try GET for small payloads
@@ -175,54 +188,15 @@
       }
 
       const syncedIds = result.synced_ids || deduped.map(t => t.id);
-      const updated = db.getTransactions({ includeDeleted: true })
-        .map(t => {
-          if (!syncedIds.includes(t.id)) return t;
-          return t.sync_status === 'pending_delete' ? null : { ...t, sync_status: 'synced' };
-        })
-        .filter(Boolean);
+      if (syncedIds.length > 0) {
+        const updated = db.getTransactions({ includeDeleted: true })
+          .map(t => {
+            if (!syncedIds.includes(t.id)) return t;
+            return t.sync_status === 'pending_delete' ? null : { ...t, sync_status: 'synced' };
+          })
+          .filter(Boolean);
 
-      db.saveTransactions(updated, { skipAutoPush: true });
-
-      // Synchronize Assets, Liabilities, Loans, Categories, Audit Logs to Sheets
-      try {
-        const assets = db.getAssets ? db.getAssets() : [];
-        if (assets.length > 0) {
-          await this._getFetch()(settings.gasUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'saveAssets', assets: assets })
-          }).catch(() => {});
-        }
-
-        const liabilities = db.getLiabilities ? db.getLiabilities() : [];
-        if (liabilities.length > 0) {
-          await this._getFetch()(settings.gasUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'saveLiabilities', liabilities: liabilities })
-          }).catch(() => {});
-        }
-
-        const loans = db.getLoans ? db.getLoans() : [];
-        if (loans.length > 0) {
-          await this._getFetch()(settings.gasUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'saveLoans', loans: loans })
-          }).catch(() => {});
-        }
-
-        const auditLogs = db.getAuditLogs ? db.getAuditLogs() : [];
-        if (auditLogs.length > 0) {
-          await this._getFetch()(settings.gasUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'saveAuditLogs', auditLogs: auditLogs })
-          }).catch(() => {});
-        }
-      } catch (subErr) {
-        console.warn('[SyncEngine] Extra entities push warning:', subErr);
+        db.saveTransactions(updated, { skipAutoPush: true });
       }
 
       this.isSyncing = false;
