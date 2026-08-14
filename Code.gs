@@ -55,19 +55,17 @@ function doGet(e) {
     }
 
     if (action === 'syncBatch') {
-      let txs = [];
+      let payloadObj = {};
       if (params.payload) {
         try {
-          const parsed = JSON.parse(decodeURIComponent(params.payload));
-          txs = parsed.transactions || [];
+          payloadObj = JSON.parse(decodeURIComponent(params.payload));
         } catch (pe) {
           try {
-            const parsed = JSON.parse(params.payload);
-            txs = parsed.transactions || [];
+            payloadObj = JSON.parse(params.payload);
           } catch (pe2) {}
         }
       }
-      return processSyncBatch(txs);
+      return processSyncBatch(payloadObj);
     }
 
     if (action === 'fetchAll') {

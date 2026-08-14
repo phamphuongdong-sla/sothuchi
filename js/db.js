@@ -326,12 +326,18 @@
       if (idx !== -1) assets[idx] = newAsset;
       else assets.push(newAsset);
       this._setItem(KEYS.ASSET, JSON.stringify(assets));
+      if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
+        window.SyncEngine.pushSync().catch(() => {});
+      }
       return newAsset;
     }
 
     deleteAsset(id) {
       const assets = this.getAssets().filter(a => a.id !== id);
       this._setItem(KEYS.ASSET, JSON.stringify(assets));
+      if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
+        window.SyncEngine.pushSync().catch(() => {});
+      }
     }
 
     getLiabilities() {
@@ -357,12 +363,18 @@
       if (idx !== -1) liabilities[idx] = newLiab;
       else liabilities.push(newLiab);
       this._setItem(KEYS.LIABILITY, JSON.stringify(liabilities));
+      if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
+        window.SyncEngine.pushSync().catch(() => {});
+      }
       return newLiab;
     }
 
     deleteLiability(id) {
       const liabilities = this.getLiabilities().filter(l => l.id !== id);
       this._setItem(KEYS.LIABILITY, JSON.stringify(liabilities));
+      if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
+        window.SyncEngine.pushSync().catch(() => {});
+      }
     }
 
     calculateNetWorth() {
@@ -402,7 +414,18 @@
       if (idx !== -1) loans[idx] = newLoan;
       else loans.push(newLoan);
       this._setItem(KEYS.LOAN, JSON.stringify(loans));
+      if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
+        window.SyncEngine.pushSync().catch(() => {});
+      }
       return newLoan;
+    }
+
+    deleteLoan(id) {
+      const loans = this.getLoans().filter(l => l.id !== id);
+      this._setItem(KEYS.LOAN, JSON.stringify(loans));
+      if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
+        window.SyncEngine.pushSync().catch(() => {});
+      }
     }
 
     recordLoanRepayment(loanId, repaymentData) {
