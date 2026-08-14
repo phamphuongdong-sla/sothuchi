@@ -19,15 +19,23 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
     const action = url.searchParams.get('action');
-    const db = env.DB || env.sothuchi_db;
 
+    // 0. Phục vụ Giao diện PWA (Static Assets) nếu truy cập qua trình duyệt công cộng
+    if (env.ASSETS && !path.startsWith('/api/') && !action) {
+      const assetRes = await env.ASSETS.fetch(request).catch(() => null);
+      if (assetRes && assetRes.status !== 404) {
+        return assetRes;
+      }
+    }
+
+    const db = env.DB || env.sothuchi_db;
     if (!db) {
       return jsonResponse({ status: 'error', message: 'D1 Database binding (DB hoặc sothuchi_db) chưa được cấu hình trong wrangler.toml' }, 500);
     }
 
     try {
-      // 1. Health check & Ping
-      if (path === '/api/ping' || action === 'ping' || path === '/') {
+      // 1. Health check & Ping (chỉ cho /api/ping hoặc action=ping)
+      if (path === '/api/ping' || action === 'ping' || (path === '/' && request.headers.get('accept')?.includes('json'))) {
         // Test query D1
         const countRes = await db.prepare('SELECT COUNT(*) as count FROM transactions').first().catch(() => null);
         return jsonResponse({
