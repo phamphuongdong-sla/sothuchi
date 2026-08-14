@@ -1011,6 +1011,22 @@ const NetWorthManager = {
     // Route hooks
     Router.on('networth', () => this.renderNetWorthView());
 
+    // Auto-refresh wallet balances & net worth when sync updates data from another device
+    window.addEventListener('walletschanged', () => {
+      this.renderNetWorthView();
+      TransactionForm.populateWallets();
+    });
+    window.addEventListener('assetschanged', () => this.renderNetWorthView());
+    window.addEventListener('loanschanged', () => this.renderNetWorthView());
+    window.addEventListener('transactionschanged', () => {
+      this.renderNetWorthView();
+      TransactionForm.populateWallets();
+    });
+    window.addEventListener('transactionupdated', () => {
+      this.renderNetWorthView();
+      TransactionForm.populateWallets();
+    });
+
     // Modal open buttons (Reset inputs for new addition)
     document.getElementById('btn-open-add-wallet')?.addEventListener('click', () => {
       document.getElementById('form-wallet')?.reset();

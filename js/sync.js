@@ -377,7 +377,15 @@
           });
 
           json.wallets.forEach(w => walletMap.set(w.id, { ...w, sync_status: 'synced' }));
-          db.saveWallets(Array.from(walletMap.values()));
+          const mergedWallets = Array.from(walletMap.values());
+          // Always recalculate balances from actual transactions before saving
+          if (db.recalculateWalletBalances) db.recalculateWalletBalances(mergedWallets);
+          db.saveWallets(mergedWallets);
+        } else if (db.getWallets && db.recalculateWalletBalances) {
+          // Even if no remote wallets, recalculate local wallet balances based on merged transactions
+          const localWallets = db.getWallets(true, true);
+          db.recalculateWalletBalances(localWallets);
+          db.saveWallets(localWallets);
         }
 
         // Merge & purge remote assets
