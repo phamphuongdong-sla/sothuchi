@@ -133,10 +133,10 @@
       const deduped = Array.from(new Map(pending.map(t => [t.id, t])).values());
 
       const wallets = db.getWallets ? db.getWallets(true) : [];
-      const assets = db.getAssets ? db.getAssets() : [];
-      const liabilities = db.getLiabilities ? db.getLiabilities() : [];
-      const loans = db.getLoans ? db.getLoans() : [];
-      const recurring = db.getRecurring ? db.getRecurring() : [];
+      const assets = db.getAssets ? db.getAssets(true) : [];
+      const liabilities = db.getLiabilities ? db.getLiabilities(true) : [];
+      const loans = db.getLoans ? db.getLoans(true) : [];
+      const recurring = db.getRecurring ? db.getRecurring(true) : [];
       const auditLogs = db.getAuditLogs ? db.getAuditLogs() : [];
 
       if (!deduped.length && !wallets.length && !assets.length && !liabilities.length && !loans.length && !recurring.length && !auditLogs.length) {
@@ -204,16 +204,60 @@
         }
       }
 
-      const syncedIds = result.synced_ids || deduped.map(t => t.id);
-      if (syncedIds.length > 0) {
-        const updated = db.getTransactions({ includeDeleted: true })
+      const syncedIds = result.synced_ids || [];
+      if (syncedIds.length > 0 || result.status === 'success') {
+        // Clear pending_delete or update sync_status to 'synced' for transactions
+        const updatedTxs = db.getTransactions({ includeDeleted: true })
           .map(t => {
-            if (!syncedIds.includes(t.id)) return t;
-            return t.sync_status === 'pending_delete' ? null : { ...t, sync_status: 'synced' };
+            if (syncedIds.length > 0 && !syncedIds.includes(t.id)) return t;
+            return (t.sync_status === 'pending_delete' || t.is_deleted) ? null : { ...t, sync_status: 'synced' };
           })
           .filter(Boolean);
+        db.saveTransactions(updatedTxs, { skipAutoPush: true });
 
-        db.saveTransactions(updated, { skipAutoPush: true });
+        // Assets
+        if (db.getAssets) {
+          const updatedAssets = db.getAssets(true)
+            .map(a => {
+              if (syncedIds.length > 0 && !syncedIds.includes(a.id)) return a;
+              return (a.sync_status === 'pending_delete' || a.is_deleted) ? null : { ...a, sync_status: 'synced' };
+            })
+            .filter(Boolean);
+          db._setItem('stc_assets', JSON.stringify(updatedAssets));
+        }
+
+        // Liabilities
+        if (db.getLiabilities) {
+          const updatedLiab = db.getLiabilities(true)
+            .map(l => {
+              if (syncedIds.length > 0 && !syncedIds.includes(l.id)) return l;
+              return (l.sync_status === 'pending_delete' || l.is_deleted) ? null : { ...l, sync_status: 'synced' };
+            })
+            .filter(Boolean);
+          db._setItem('stc_liabilities', JSON.stringify(updatedLiab));
+        }
+
+        // Loans
+        if (db.getLoans) {
+          const updatedLoans = db.getLoans(true)
+            .map(l => {
+              if (syncedIds.length > 0 && !syncedIds.includes(l.id)) return l;
+              return (l.sync_status === 'pending_delete' || l.is_deleted) ? null : { ...l, sync_status: 'synced' };
+            })
+            .filter(Boolean);
+          db._setItem('stc_loans', JSON.stringify(updatedLoans));
+        }
+
+        // Recurring
+        if (db.getRecurring) {
+          const updatedRec = db.getRecurring(true)
+            .map(r => {
+              if (syncedIds.length > 0 && !syncedIds.includes(r.id)) return r;
+              return (r.sync_status === 'pending_delete' || r.is_deleted) ? null : { ...r, sync_status: 'synced' };
+            })
+            .filter(Boolean);
+          db._setItem('stc_recurring', JSON.stringify(updatedRec));
+        }
       }
 
       this.isSyncing = false;
@@ -315,41 +359,83 @@
           db.saveWallets(Array.from(walletMap.values()));
         }
 
-        // Merge remote assets, liabilities, loans, recurring if available
-        if (Array.isArray(json.assets) && json.assets.length > 0 && db.getAssets) {
-          const existingAssets = db.getAssets();
-          const assetMap = new Map(existingAssets.map(a => [a.id, a]));
-          json.assets.forEach(a => assetMap.set(a.id, a));
+        // Merge & purge remote assets
+        if (Array.isArray(json.assets) && db.getAssets) {
+          const localAssets = db.getAssets(true);
+          const assetMap = new Map(localAssets.map(a => [a.id, a]));
+          const remoteIds = new Set(json.assets.map(a => String(a.id)));
+
+          localAssets.forEach(local => {
+            if (local.sync_status === 'pending_delete') {
+              if (!remoteIds.has(String(local.id))) assetMap.delete(local.id);
+            } else if (local.sync_status === 'synced' && !remoteIds.has(String(local.id))) {
+              assetMap.delete(local.id);
+            }
+          });
+
+          json.assets.forEach(a => assetMap.set(a.id, { ...a, sync_status: 'synced' }));
           db._setItem('stc_assets', JSON.stringify(Array.from(assetMap.values())));
         }
-        if (Array.isArray(json.liabilities) && json.liabilities.length > 0 && db.getLiabilities) {
-          const existingLiab = db.getLiabilities();
-          const liabMap = new Map(existingLiab.map(l => [l.id, l]));
-          json.liabilities.forEach(l => liabMap.set(l.id, l));
+
+        // Merge & purge remote liabilities
+        if (Array.isArray(json.liabilities) && db.getLiabilities) {
+          const localLiab = db.getLiabilities(true);
+          const liabMap = new Map(localLiab.map(l => [l.id, l]));
+          const remoteIds = new Set(json.liabilities.map(l => String(l.id)));
+
+          localLiab.forEach(local => {
+            if (local.sync_status === 'pending_delete') {
+              if (!remoteIds.has(String(local.id))) liabMap.delete(local.id);
+            } else if (local.sync_status === 'synced' && !remoteIds.has(String(local.id))) {
+              liabMap.delete(local.id);
+            }
+          });
+
+          json.liabilities.forEach(l => liabMap.set(l.id, { ...l, sync_status: 'synced' }));
           db._setItem('stc_liabilities', JSON.stringify(Array.from(liabMap.values())));
         }
-        if (Array.isArray(json.loans) && json.loans.length > 0 && db.getLoans) {
-          const existingLoans = db.getLoans();
-          const loanMap = new Map(existingLoans.map(l => [l.id, l]));
+
+        // Merge & purge remote loans
+        if (Array.isArray(json.loans) && db.getLoans) {
+          const localLoans = db.getLoans(true);
+          const loanMap = new Map(localLoans.map(l => [l.id, l]));
+          const remoteIds = new Set(json.loans.map(l => String(l.id)));
+
+          localLoans.forEach(local => {
+            if (local.sync_status === 'pending_delete') {
+              if (!remoteIds.has(String(local.id))) loanMap.delete(local.id);
+            } else if (local.sync_status === 'synced' && !remoteIds.has(String(local.id))) {
+              loanMap.delete(local.id);
+            }
+          });
+
           json.loans.forEach(l => {
             let repayments = l.repayments;
             if (typeof l.repayments_json === 'string') {
-              try {
-                repayments = JSON.parse(l.repayments_json);
-              } catch (_) {
-                repayments = [];
-              }
+              try { repayments = JSON.parse(l.repayments_json); } catch (_) { repayments = []; }
             } else if (!Array.isArray(repayments)) {
               repayments = [];
             }
-            loanMap.set(l.id, { ...l, repayments });
+            loanMap.set(l.id, { ...l, repayments, sync_status: 'synced' });
           });
           db._setItem('stc_loans', JSON.stringify(Array.from(loanMap.values())));
         }
-        if (Array.isArray(json.recurring) && json.recurring.length > 0 && db.getRecurring) {
-          const existingRec = db.getRecurring();
-          const recMap = new Map(existingRec.map(r => [r.id, r]));
-          json.recurring.forEach(r => recMap.set(r.id, r));
+
+        // Merge & purge remote recurring
+        if (Array.isArray(json.recurring) && db.getRecurring) {
+          const localRec = db.getRecurring(true);
+          const recMap = new Map(localRec.map(r => [r.id, r]));
+          const remoteIds = new Set(json.recurring.map(r => String(r.id)));
+
+          localRec.forEach(local => {
+            if (local.sync_status === 'pending_delete') {
+              if (!remoteIds.has(String(local.id))) recMap.delete(local.id);
+            } else if (local.sync_status === 'synced' && !remoteIds.has(String(local.id))) {
+              recMap.delete(local.id);
+            }
+          });
+
+          json.recurring.forEach(r => recMap.set(r.id, { ...r, sync_status: 'synced' }));
           db._setItem('stc_recurring', JSON.stringify(Array.from(recMap.values())));
         }
 

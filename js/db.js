@@ -464,14 +464,18 @@
     }
 
     // Assets & Liabilities (Net Worth Balance Sheet)
-    getAssets() {
+    getAssets(includeDeleted = false) {
       const raw = this._getItem(KEYS.ASSET);
       if (!raw) return [];
-      try { return JSON.parse(raw) || []; } catch (_) { return []; }
+      try {
+        const list = JSON.parse(raw) || [];
+        if (includeDeleted) return list;
+        return list.filter(a => !a.is_deleted && a.sync_status !== 'pending_delete');
+      } catch (_) { return []; }
     }
 
     saveAsset(data) {
-      const assets = this.getAssets();
+      const assets = this.getAssets(true);
       const id = data.id || generateId('asset');
       const now = new Date().toISOString();
       const newAsset = {
@@ -480,7 +484,8 @@
         category: data.category || 'Tài khoản ngân hàng',
         value: Math.max(0, Number(data.value) || 0),
         note: data.note || '',
-        updated_at: now
+        updated_at: now,
+        sync_status: 'pending_update'
       };
       const idx = assets.findIndex(a => a.id === id);
       if (idx !== -1) assets[idx] = newAsset;
@@ -493,21 +498,39 @@
     }
 
     deleteAsset(id) {
-      const assets = this.getAssets().filter(a => a.id !== id);
-      this._setItem(KEYS.ASSET, JSON.stringify(assets));
+      const assets = this.getAssets(true);
+      const idx = assets.findIndex(a => a.id === id);
+      if (idx !== -1) {
+        const item = assets[idx];
+        if (item.sync_status === 'synced' || item.updated_at) {
+          assets[idx] = {
+            ...item,
+            is_deleted: 1,
+            sync_status: 'pending_delete',
+            updated_at: new Date().toISOString()
+          };
+        } else {
+          assets.splice(idx, 1);
+        }
+        this._setItem(KEYS.ASSET, JSON.stringify(assets));
+      }
       if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
         window.SyncEngine.pushSync().catch(() => {});
       }
     }
 
-    getLiabilities() {
+    getLiabilities(includeDeleted = false) {
       const raw = this._getItem(KEYS.LIABILITY);
       if (!raw) return [];
-      try { return JSON.parse(raw) || []; } catch (_) { return []; }
+      try {
+        const list = JSON.parse(raw) || [];
+        if (includeDeleted) return list;
+        return list.filter(l => !l.is_deleted && l.sync_status !== 'pending_delete');
+      } catch (_) { return []; }
     }
 
     saveLiability(data) {
-      const liabilities = this.getLiabilities();
+      const liabilities = this.getLiabilities(true);
       const id = data.id || generateId('liab');
       const now = new Date().toISOString();
       const newLiab = {
@@ -517,7 +540,8 @@
         total_debt: Math.max(0, Number(data.total_debt || data.value) || 0),
         remaining_debt: Math.max(0, Number(data.remaining_debt ?? data.value) || 0),
         note: data.note || '',
-        updated_at: now
+        updated_at: now,
+        sync_status: 'pending_update'
       };
       const idx = liabilities.findIndex(l => l.id === id);
       if (idx !== -1) liabilities[idx] = newLiab;
@@ -530,8 +554,22 @@
     }
 
     deleteLiability(id) {
-      const liabilities = this.getLiabilities().filter(l => l.id !== id);
-      this._setItem(KEYS.LIABILITY, JSON.stringify(liabilities));
+      const liabilities = this.getLiabilities(true);
+      const idx = liabilities.findIndex(l => l.id === id);
+      if (idx !== -1) {
+        const item = liabilities[idx];
+        if (item.sync_status === 'synced' || item.updated_at) {
+          liabilities[idx] = {
+            ...item,
+            is_deleted: 1,
+            sync_status: 'pending_delete',
+            updated_at: new Date().toISOString()
+          };
+        } else {
+          liabilities.splice(idx, 1);
+        }
+        this._setItem(KEYS.LIABILITY, JSON.stringify(liabilities));
+      }
       if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
         window.SyncEngine.pushSync().catch(() => {});
       }
@@ -548,14 +586,18 @@
     }
 
     // Loans & Debts (Vay & Cho vay Tracker)
-    getLoans() {
+    getLoans(includeDeleted = false) {
       const raw = this._getItem(KEYS.LOAN);
       if (!raw) return [];
-      try { return JSON.parse(raw) || []; } catch (_) { return []; }
+      try {
+        const list = JSON.parse(raw) || [];
+        if (includeDeleted) return list;
+        return list.filter(l => !l.is_deleted && l.sync_status !== 'pending_delete');
+      } catch (_) { return []; }
     }
 
     saveLoan(data) {
-      const loans = this.getLoans();
+      const loans = this.getLoans(true);
       const id = data.id || generateId('loan');
       const now = new Date().toISOString();
       const existing = loans.find(l => l.id === id);
@@ -585,7 +627,8 @@
         note: data.note !== undefined ? data.note : (existing ? existing.note : ''),
         status: remainingAmount <= 0 ? 'paid' : (data.status || (existing ? existing.status : 'active')),
         repayments: repayments,
-        updated_at: now
+        updated_at: now,
+        sync_status: 'pending_update'
       };
       const idx = loans.findIndex(l => l.id === id);
       if (idx !== -1) loans[idx] = newLoan;
@@ -598,15 +641,29 @@
     }
 
     deleteLoan(id) {
-      const loans = this.getLoans().filter(l => l.id !== id);
-      this._setItem(KEYS.LOAN, JSON.stringify(loans));
+      const loans = this.getLoans(true);
+      const idx = loans.findIndex(l => l.id === id);
+      if (idx !== -1) {
+        const item = loans[idx];
+        if (item.sync_status === 'synced' || item.updated_at) {
+          loans[idx] = {
+            ...item,
+            is_deleted: 1,
+            sync_status: 'pending_delete',
+            updated_at: new Date().toISOString()
+          };
+        } else {
+          loans.splice(idx, 1);
+        }
+        this._setItem(KEYS.LOAN, JSON.stringify(loans));
+      }
       if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
         window.SyncEngine.pushSync().catch(() => {});
       }
     }
 
     recordLoanRepayment(loanId, repaymentData) {
-      const loans = this.getLoans();
+      const loans = this.getLoans(true);
       const idx = loans.findIndex(l => l.id === loanId);
       if (idx === -1) throw new Error('Không tìm thấy khoản vay');
 
@@ -627,6 +684,7 @@
         note: repaymentData.note || ''
       });
       target.updated_at = new Date().toISOString();
+      target.sync_status = 'pending_update';
 
       this._setItem(KEYS.LOAN, JSON.stringify(loans));
 
@@ -642,18 +700,25 @@
           note: `Thanh toán cho ${target.person_name} (Gốc: ${this.formatVND(principal)}, Lãi: ${this.formatVND(interest)})`
         });
       }
+      if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
+        window.SyncEngine.pushSync().catch(() => {});
+      }
       return target;
     }
 
     // Recurring Automated Ledger
-    getRecurring() {
+    getRecurring(includeDeleted = false) {
       const raw = this._getItem(KEYS.RECURRING);
       if (!raw) return [];
-      try { return JSON.parse(raw) || []; } catch (_) { return []; }
+      try {
+        const list = JSON.parse(raw) || [];
+        if (includeDeleted) return list;
+        return list.filter(r => !r.is_deleted && r.sync_status !== 'pending_delete');
+      } catch (_) { return []; }
     }
 
     saveRecurring(data) {
-      const list = this.getRecurring();
+      const list = this.getRecurring(true);
       const id = data.id || generateId('rec');
       const newItem = {
         id,
@@ -664,18 +729,40 @@
         frequency: data.frequency || 'monthly',
         day_of_month: Number(data.day_of_month) || 1,
         last_run_date: data.last_run_date || '',
-        is_active: data.is_active !== false
+        is_active: data.is_active !== false,
+        updated_at: new Date().toISOString(),
+        sync_status: 'pending_update'
       };
       const idx = list.findIndex(r => r.id === id);
       if (idx !== -1) list[idx] = newItem;
       else list.push(newItem);
       this._setItem(KEYS.RECURRING, JSON.stringify(list));
+      if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
+        window.SyncEngine.pushSync().catch(() => {});
+      }
       return newItem;
     }
 
     deleteRecurring(id) {
-      const list = this.getRecurring().filter(r => r.id !== id);
-      this._setItem(KEYS.RECURRING, JSON.stringify(list));
+      const list = this.getRecurring(true);
+      const idx = list.findIndex(r => r.id === id);
+      if (idx !== -1) {
+        const item = list[idx];
+        if (item.sync_status === 'synced' || item.updated_at) {
+          list[idx] = {
+            ...item,
+            is_deleted: 1,
+            sync_status: 'pending_delete',
+            updated_at: new Date().toISOString()
+          };
+        } else {
+          list.splice(idx, 1);
+        }
+        this._setItem(KEYS.RECURRING, JSON.stringify(list));
+      }
+      if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
+        window.SyncEngine.pushSync().catch(() => {});
+      }
     }
 
     checkAndGenerateRecurringTransactions() {
