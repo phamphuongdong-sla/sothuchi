@@ -1503,8 +1503,104 @@ const App = {
         });
       }
 
+      // Initialize Auto-Save & Enter Submit System
+      AutoSaveManager.init();
+
     } catch (err) {
       console.warn('[App] Initialization warning:', err);
+    }
+  }
+};
+
+/* --------------------------------------------------------------------------
+   Auto-Save & Enter Key Auto-Submit System
+   -------------------------------------------------------------------------- */
+const AutoSaveManager = {
+  init() {
+    this.setupEnterSubmit();
+    this.setupDraftAutoSave();
+    this.setupFormBlurAutoSave();
+  },
+
+  setupEnterSubmit() {
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' || e.shiftKey) return;
+      const target = e.target;
+      if (!target || (target.tagName !== 'INPUT' && target.tagName !== 'SELECT')) return;
+
+      const form = target.closest('form');
+      if (form) {
+        e.preventDefault();
+        if (typeof form.requestSubmit === 'function') {
+          form.requestSubmit();
+        } else {
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+      }
+    });
+  },
+
+  setupDraftAutoSave() {
+    const formIds = ['transaction-form', 'form-wallet', 'form-asset', 'form-liability', 'form-loan', 'form-add-recurring'];
+    formIds.forEach(id => {
+      const form = document.getElementById(id);
+      if (!form) return;
+
+      this.restoreDraft(form, id);
+
+      ['input', 'change'].forEach(evtType => {
+        form.addEventListener(evtType, () => {
+          this.saveDraft(form, id);
+        });
+      });
+
+      form.addEventListener('submit', () => {
+        try { sessionStorage.removeItem(`stc_draft_${id}`); } catch (_) {}
+      });
+    });
+  },
+
+  saveDraft(form, formId) {
+    try {
+      const inputs = form.querySelectorAll('input, select, textarea');
+      const data = {};
+      inputs.forEach(input => {
+        if (input.id || input.name) {
+          data[input.id || input.name] = input.value;
+        }
+      });
+      sessionStorage.setItem(`stc_draft_${formId}`, JSON.stringify(data));
+    } catch (_) {}
+  },
+
+  restoreDraft(form, formId) {
+    try {
+      const raw = sessionStorage.getItem(`stc_draft_${formId}`);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      Object.keys(data).forEach(key => {
+        const input = form.querySelector(`#${key}, [name="${key}"]`);
+        if (input && !input.value && data[key]) {
+          input.value = data[key];
+        }
+      });
+    } catch (_) {}
+  },
+
+  setupFormBlurAutoSave() {
+    window.addEventListener('transactionadded', () => this.showAutoSaveBadge());
+    window.addEventListener('transactionupdated', () => this.showAutoSaveBadge());
+    window.addEventListener('transactiondeleted', () => this.showAutoSaveBadge());
+    window.addEventListener('walletschanged', () => this.showAutoSaveBadge());
+    window.addEventListener('assetschanged', () => this.showAutoSaveBadge());
+    window.addEventListener('loanschanged', () => this.showAutoSaveBadge());
+  },
+
+  showAutoSaveBadge() {
+    const badge = document.getElementById('sync-status-badge');
+    if (badge) {
+      badge.classList.add('auto-save-pulse');
+      setTimeout(() => badge.classList.remove('auto-save-pulse'), 1500);
     }
   }
 };
@@ -1513,12 +1609,12 @@ const App = {
    Global Exports
    -------------------------------------------------------------------------- */
 Object.assign(window, {
-  App, ThemeEngine, Router, TransactionForm, CategoryTreeManager, NetWorthManager, Toast,
+  App, ThemeEngine, Router, TransactionForm, CategoryTreeManager, NetWorthManager, Toast, AutoSaveManager,
   parseRawAmount, formatVNDInput, numberToVietnameseWords
 });
 if (typeof globalThis !== 'undefined') {
   Object.assign(globalThis, {
-    App, ThemeEngine, Router, TransactionForm, CategoryTreeManager, NetWorthManager, Toast,
+    App, ThemeEngine, Router, TransactionForm, CategoryTreeManager, NetWorthManager, Toast, AutoSaveManager,
     parseRawAmount, formatVNDInput, numberToVietnameseWords
   });
 }
