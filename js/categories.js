@@ -295,6 +295,9 @@
         localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(normalized));
       }
     } catch (e) {}
+    if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
+      window.SyncEngine.pushSync().catch(() => {});
+    }
     return normalized;
   }
 
@@ -362,6 +365,10 @@
         localStorage.setItem(ALT_STORAGE_KEY, json);
       }
     } catch (e) {}
+
+    if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
+      window.SyncEngine.pushSync().catch(() => {});
+    }
 
     // Dispatch Custom DOM Event for reactive updates
     if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {

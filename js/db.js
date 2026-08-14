@@ -1103,9 +1103,13 @@
         txs.forEach(t => map.set(t.id, normalizeTransaction(t)));
         const merged = Array.from(map.values());
         this.saveTransactions(merged);
-        const allWallets = this.getWallets(true);
+        const allWallets = this.getWallets(true, true);
         this.recalculateWalletBalances(allWallets);
         this.saveWallets(allWallets);
+      }
+
+      if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
+        setTimeout(() => window.SyncEngine.pushSync().catch(() => {}), 100);
       }
 
       return {
