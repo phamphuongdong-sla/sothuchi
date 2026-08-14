@@ -20,6 +20,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Sổ Thu Chi">
 
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -45,11 +50,15 @@
         </div>
         <!-- Theme Toggle Button -->
         <button id="theme-toggle" class="icon-btn" aria-label="Đổi giao diện Dark/Light Mode" type="button" title="Giao diện Sáng/Tối">
-          <span class="theme-icon" aria-hidden="true">🌙</span>
+          <span class="theme-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          </span>
         </button>
         <!-- Lock App Button -->
         <button id="btn-lock-app" class="icon-btn" aria-label="Khóa ứng dụng" type="button" title="Khóa ứng dụng" data-action="logout">
-          <span class="lock-icon" aria-hidden="true">🔒</span>
+          <span class="lock-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </span>
         </button>
       </div>
     </header>
@@ -65,31 +74,31 @@
       <ul class="nav-list" role="tablist">
         <li class="nav-item">
           <a href="#transactions" id="nav-transactions" class="nav-link active" data-view="transactions" role="tab" aria-selected="true">
-            <span class="nav-icon">💸</span>
+            <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
             <span class="nav-label">Giao dịch</span>
           </a>
         </li>
         <li class="nav-item">
           <a href="#budget" id="nav-budget" class="nav-link" data-view="budget" role="tab" aria-selected="false">
-            <span class="nav-icon">📊</span>
+            <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect width="4" height="7" x="7" y="14" rx="1"/><rect width="4" height="12" x="15" y="9" rx="1"/></svg></span>
             <span class="nav-label">Lịch sử</span>
           </a>
         </li>
         <li class="nav-item">
           <a href="#reports" id="nav-reports" class="nav-link" data-view="reports" role="tab" aria-selected="false">
-            <span class="nav-icon">📈</span>
+            <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></span>
             <span class="nav-label">Báo cáo</span>
           </a>
         </li>
         <li class="nav-item">
           <a href="#networth" id="nav-networth" class="nav-link" data-view="networth" role="tab" aria-selected="false">
-            <span class="nav-icon">🏢</span>
+            <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 22H2"/><path d="M14 22V10h6v12"/><path d="M4 22V2h6v20"/><path d="M10 6h-2"/><path d="M10 10h-2"/><path d="M10 14h-2"/><path d="M10 18h-2"/></svg></span>
             <span class="nav-label">Tài sản</span>
           </a>
         </li>
         <li class="nav-item">
           <a href="#settings" id="nav-settings" class="nav-link" data-view="settings" role="tab" aria-selected="false">
-            <span class="nav-icon">⚙️</span>
+            <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></span>
             <span class="nav-label">Cài đặt</span>
           </a>
         </li>
