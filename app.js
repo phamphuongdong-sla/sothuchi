@@ -1150,6 +1150,73 @@ const App = {
         }
       }, 1000);
 
+      // SQLite Backend & Dump Export/Import Event Listeners
+      const btnExportSql = document.getElementById('btn-export-sqlite');
+      if (btnExportSql) {
+        btnExportSql.addEventListener('click', () => {
+          try {
+            const sqlDump = window.DB.exportSql();
+            const blob = new Blob([sqlDump], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sothuchi_sqlite_backup_${new Date().toISOString().split('T')[0]}.sql`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            Toast.show('Đã tải xuống file SQLite Dump (.sql) thành công', 'success');
+          } catch (err) {
+            Toast.show(err.message || 'Lỗi xuất file SQLite', 'error');
+          }
+        });
+      }
+
+      const btnTriggerImport = document.getElementById('btn-trigger-import-sqlite');
+      const fileImportSql = document.getElementById('file-import-sqlite');
+      if (btnTriggerImport && fileImportSql) {
+        btnTriggerImport.addEventListener('click', () => fileImportSql.click());
+        fileImportSql.addEventListener('change', (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const text = event.target.result;
+              const res = window.DB.importSql(text);
+              Toast.show(`Đã khôi phục thành công ${res.imported_transactions} giao dịch từ file SQL`, 'success');
+              window.dispatchEvent(new CustomEvent('transactionadded'));
+            } catch (err) {
+              Toast.show(err.message || 'Lỗi khôi phục file SQL', 'error');
+            }
+          };
+          reader.readAsText(file);
+        });
+      }
+
+      const btnSaveSqliteUrl = document.getElementById('btn-save-sqlite-url');
+      const inputSqliteUrl = document.getElementById('input-sqlite-url');
+      if (btnSaveSqliteUrl && inputSqliteUrl) {
+        const syncEngine = window.SyncEngine;
+        if (syncEngine) {
+          const currentSettings = syncEngine.getSettings();
+          if (currentSettings?.gasUrl) {
+            inputSqliteUrl.value = currentSettings.gasUrl;
+          }
+        }
+        btnSaveSqliteUrl.addEventListener('click', () => {
+          const newUrl = inputSqliteUrl.value.trim();
+          if (!newUrl) {
+            Toast.show('Vui lòng nhập URL Endpoint', 'error');
+            return;
+          }
+          if (window.SyncEngine) {
+            window.SyncEngine.saveSettings({ gasUrl: newUrl });
+            Toast.show('Đã lưu URL SQLite / Cloudflare D1 Endpoint thành công', 'success');
+          }
+        });
+      }
+
     } catch (err) {
       console.warn('[App] Initialization warning:', err);
     }

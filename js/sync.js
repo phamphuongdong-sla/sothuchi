@@ -21,12 +21,12 @@
     }
 
     /**
-     * Validate a Google Apps Script Web App URL.
+     * Validate a Google Apps Script or Cloudflare D1 SQLite Endpoint URL.
      */
     validateUrl(url) {
       if (!url || typeof url !== 'string') return false;
       const t = url.trim();
-      return t.startsWith('https://script.google.com/macros/s/') && t.endsWith('/exec');
+      return (t.startsWith('https://') || t.startsWith('http://')) && t.length > 10;
     }
 
     /**
@@ -55,7 +55,7 @@
      * Load settings from LocalStorage.
      */
     getSettings() {
-      const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbwWdURv3pdrXaYwMMTg1SzTjmCJQ9bjmW00A7tl_vkiwcTQObK_iHfISwyqWIQNSyuvjg/exec';
+      const DEFAULT_URL = 'https://sothuchi-sqlite-backend.mrdong-sothuchi.workers.dev';
       try {
         const s = global.localStorage;
         if (s) {
@@ -85,14 +85,21 @@
     }
 
     /**
-     * Test connection to GAS endpoint via action=ping.
+     * Test connection to Endpoint (GAS or Cloudflare D1 SQLite Worker) via ping.
      */
     async testConnection(url) {
       const endpoint = url || this.getSettings().gasUrl;
-      if (!this.validateUrl(endpoint)) throw new Error('URL GAS Endpoint không hợp lệ');
+      if (!this.validateUrl(endpoint)) throw new Error('URL Endpoint không hợp lệ');
 
-      const sep = endpoint.includes('?') ? '&' : '?';
-      const res = await this._getFetch()(endpoint + sep + 'action=ping');
+      let targetUrl = endpoint;
+      if (endpoint.includes('workers.dev') || endpoint.includes('/api/')) {
+        targetUrl = endpoint.endsWith('/api/ping') ? endpoint : `${endpoint.replace(/\/$/, '')}/api/ping`;
+      } else {
+        const sep = endpoint.includes('?') ? '&' : '?';
+        targetUrl = endpoint + sep + 'action=ping';
+      }
+
+      const res = await this._getFetch()(targetUrl);
       if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
 
       const json = await res.json();

@@ -206,11 +206,46 @@ function responseJSON(obj) {
 
 ---
 
+## 🗄️ Hướng Dẫn Tích Hợp SQLite & Cloudflare D1 (Serverless Cloud SQLite)
+
+Ứng dụng hỗ trợ kết nối với **Cloudflare D1 (SQLite Serverless)** hoàn toàn miễn phí (5GB storage, 5M read/ngày) thay thế cho Google Sheets.
+
+### 1. Khởi tạo Database SQLite D1 trên Cloudflare:
+```bash
+# 1. Đăng nhập Cloudflare CLI
+npx wrangler login
+
+# 2. Tạo database D1 mới
+npx wrangler d1 create sothuchi-db
+
+# 3. Khởi tạo bảng dữ liệu từ schema.sql
+npx wrangler d1 execute sothuchi-db --file=./schema.sql
+```
+
+### 2. Triển khai Worker Backend API:
+```bash
+# Deploy worker.js lên Cloudflare Workers
+npx wrangler deploy
+```
+
+### 3. Lưu URL Worker vào Ứng Dụng:
+Sao chép URL Worker (ví dụ: `https://sothuchi-sqlite-backend.your-subdomain.workers.dev`), mở tab **Cài đặt** trên PWA và dán vào mục **Cấu hình SQLite Database & Cloudflare D1**.
+
+---
+
+## 📥 Phục Hồi & Xuất Backup SQLite Dump (.sql)
+
+Trực tiếp trong giao diện ứng dụng (Tab Cài đặt):
+- **Xuất File Backup**: Nhấn **Tải File SQLite Dump (.sql)** để lưu toàn bộ dữ liệu dưới dạng câu lệnh SQL chuẩn (`CREATE TABLE`, `INSERT INTO`).
+- **Khôi Phục File SQL**: Nhấn **Chọn File .sql Khôi Phục** để khôi phục toàn bộ giao dịch vào hệ thống.
+
+---
+
 ## 📄 Cấu Trúc Dự Án
 ```json
 {
   "project": "Sổ Thu Chi Cá Nhân (PWA)",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "files": [
     "index.html",
     "style.css",
@@ -222,8 +257,12 @@ function responseJSON(obj) {
     "js/sync.js",
     "manifest.json",
     "sw.js",
+    "schema.sql",
+    "worker.js",
+    "wrangler.toml",
     "Code.gs",
     "README.md"
   ]
 }
 ```
+

@@ -550,6 +550,41 @@
           </div>
         </div>
 
+        <!-- SQLite Database & Cloudflare D1 Configuration Card -->
+        <div class="card settings-card mt-4">
+          <div class="card-header">
+            <h3 class="card-title">🗄️ Cấu Hình SQLite Database & Cloudflare D1</h3>
+            <p class="card-subtitle">Kết nối với Cloudflare D1 SQLite Cloud Backend hoặc Quản lý tệp SQLite DDL/DML Dump</p>
+          </div>
+          <div class="form-group form-group--spaced">
+            <label for="input-sqlite-url" class="form-label">URL Cloudflare D1 Worker / SQLite API</label>
+            <div class="input-with-btn">
+              <input type="url" id="input-sqlite-url" class="form-control" placeholder="https://sothuchi-sqlite-backend.mrdong-sothuchi.workers.dev">
+              <button type="button" id="btn-save-sqlite-url" class="btn btn-primary">Lưu URL</button>
+            </div>
+            <p class="form-help-text">Miễn phí 5GB dung lượng & 5 triệu truy vấn Đọc/ngày trên Cloudflare D1.</p>
+          </div>
+
+          <div class="sqlite-tools-grid mt-3">
+            <div class="sqlite-tool-box card p-3" style="background:var(--color-bg-secondary);">
+              <h4 class="form-label-sm mb-1">📥 Xuất File Backup SQLite (.sql)</h4>
+              <p style="font-size:0.8rem; color:var(--color-text-secondary); margin-bottom:0.75rem;">Xuất toàn bộ bảng dữ liệu dưới dạng câu lệnh SQL CREATE TABLE và INSERT chuẩn SQLite.</p>
+              <button type="button" id="btn-export-sqlite" class="btn btn-secondary btn-sm">
+                💾 Tải File SQLite Dump (.sql)
+              </button>
+            </div>
+
+            <div class="sqlite-tool-box card p-3" style="background:var(--color-bg-secondary);">
+              <h4 class="form-label-sm mb-1">📤 Phục Hồi Dữ Liệu SQLite (.sql)</h4>
+              <p style="font-size:0.8rem; color:var(--color-text-secondary); margin-bottom:0.75rem;">Nhập dữ liệu từ file backup SQL để khôi phục hoặc chuyển đổi sang hệ thống mới.</p>
+              <input type="file" id="file-import-sqlite" accept=".sql,.txt" style="display:none;">
+              <button type="button" id="btn-trigger-import-sqlite" class="btn btn-primary btn-sm">
+                📂 Chọn File .sql Khôi Phục
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Role-Based Permissions Card -->
         <div class="card settings-card mt-4">
           <div class="card-header">

@@ -540,6 +540,141 @@
       return Math.round(Number(amount) || 0)
         .toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' ₫';
     }
+
+    /**
+     * SQLite Export SQL Dump (.sql)
+     * Generates standard SQLite DDL & DML INSERT statements for all tables.
+     */
+    exportSql() {
+      const escape = (val) => {
+        if (val === null || val === undefined) return 'NULL';
+        if (typeof val === 'number') return String(val);
+        if (typeof val === 'boolean') return val ? '1' : '0';
+        return "'" + String(val).replace(/'/g, "''") + "'";
+      };
+
+      let sql = `-- ============================================================================\n`;
+      sql += `-- SỔ THU CHI CÁ NHÂN - SQLITE DUMP EXPORT\n`;
+      sql += `-- Generated on: ${new Date().toISOString()}\n`;
+      sql += `-- ============================================================================\n\n`;
+
+      // 1. Transactions
+      sql += `-- Bảng Transactions\n`;
+      sql += `CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, date TEXT, type TEXT, category TEXT, amount REAL, note TEXT, created_at TEXT, updated_at TEXT, sync_status TEXT);\n`;
+      const txs = this._loadAll();
+      txs.forEach(t => {
+        sql += `INSERT OR REPLACE INTO transactions VALUES (${escape(t.id)}, ${escape(t.date)}, ${escape(t.type)}, ${escape(t.category)}, ${t.amount || 0}, ${escape(t.note)}, ${escape(t.created_at)}, ${escape(t.updated_at)}, ${escape(t.sync_status)});\n`;
+      });
+      sql += `\n`;
+
+      // 2. Categories
+      sql += `-- Bảng Categories\n`;
+      sql += `CREATE TABLE IF NOT EXISTS categories (id TEXT PRIMARY KEY, name TEXT, type TEXT, icon TEXT, color TEXT, is_hidden INTEGER, sort_order INTEGER);\n`;
+      const cats = this.getCategories(true);
+      cats.forEach(c => {
+        sql += `INSERT OR REPLACE INTO categories VALUES (${escape(c.id)}, ${escape(c.name)}, ${escape(c.type)}, ${escape(c.icon)}, ${escape(c.color)}, ${c.is_hidden || c.isHidden ? 1 : 0}, ${c.sort_order || 0});\n`;
+      });
+      sql += `\n`;
+
+      // 3. Assets
+      sql += `-- Bảng Assets\n`;
+      sql += `CREATE TABLE IF NOT EXISTS assets (id TEXT PRIMARY KEY, name TEXT, category TEXT, value REAL, note TEXT, updated_at TEXT);\n`;
+      this.getAssets().forEach(a => {
+        sql += `INSERT OR REPLACE INTO assets VALUES (${escape(a.id)}, ${escape(a.name)}, ${escape(a.category)}, ${a.value || 0}, ${escape(a.note)}, ${escape(a.updated_at)});\n`;
+      });
+      sql += `\n`;
+
+      // 4. Liabilities
+      sql += `-- Bảng Liabilities\n`;
+      sql += `CREATE TABLE IF NOT EXISTS liabilities (id TEXT PRIMARY KEY, name TEXT, category TEXT, total_debt REAL, remaining_debt REAL, note TEXT, updated_at TEXT);\n`;
+      this.getLiabilities().forEach(l => {
+        sql += `INSERT OR REPLACE INTO liabilities VALUES (${escape(l.id)}, ${escape(l.name)}, ${escape(l.category)}, ${l.total_debt || 0}, ${l.remaining_debt || 0}, ${escape(l.note)}, ${escape(l.updated_at)});\n`;
+      });
+      sql += `\n`;
+
+      // 5. Loans
+      sql += `-- Bảng Loans\n`;
+      sql += `CREATE TABLE IF NOT EXISTS loans (id TEXT PRIMARY KEY, type TEXT, person_name TEXT, original_amount REAL, remaining_amount REAL, due_date TEXT, note TEXT, status TEXT, repayments_json TEXT, updated_at TEXT);\n`;
+      this.getLoans().forEach(l => {
+        sql += `INSERT OR REPLACE INTO loans VALUES (${escape(l.id)}, ${escape(l.type)}, ${escape(l.person_name)}, ${l.original_amount || 0}, ${l.remaining_amount || 0}, ${escape(l.due_date)}, ${escape(l.note)}, ${escape(l.status)}, ${escape(JSON.stringify(l.repayments || []))}, ${escape(l.updated_at)});\n`;
+      });
+      sql += `\n`;
+
+      // 6. Recurring
+      sql += `-- Bảng Recurring\n`;
+      sql += `CREATE TABLE IF NOT EXISTS recurring (id TEXT PRIMARY KEY, type TEXT, amount REAL, category TEXT, note TEXT, frequency TEXT, day_of_month INTEGER, last_run_date TEXT, is_active INTEGER);\n`;
+      this.getRecurring().forEach(r => {
+        sql += `INSERT OR REPLACE INTO recurring VALUES (${escape(r.id)}, ${escape(r.type)}, ${r.amount || 0}, ${escape(r.category)}, ${escape(r.note)}, ${escape(r.frequency)}, ${r.day_of_month || 1}, ${escape(r.last_run_date)}, ${r.is_active ? 1 : 0});\n`;
+      });
+
+      return sql;
+    }
+
+    /**
+     * SQLite Import SQL / JSON File
+     */
+    importSql(sqlText) {
+      if (!sqlText || typeof sqlText !== 'string') throw new Error('Nội dung SQL không hợp lệ');
+
+      // Simple parser for INSERT INTO statements from dump
+      const lines = sqlText.split('\n');
+      const txs = [];
+      const cats = [];
+
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('INSERT INTO transactions') || trimmed.startsWith('INSERT OR REPLACE INTO transactions')) {
+          // Parse values
+          const match = trimmed.match(/VALUES\s*\((.+)\);$/i);
+          if (match) {
+            const rawVals = match[1];
+            // Primitive SQL value tokenizer
+            const tokens = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < rawVals.length; i++) {
+              const char = rawVals[i];
+              if (char === "'" && rawVals[i + 1] === "'") {
+                current += "'";
+                i++;
+              } else if (char === "'") {
+                inQuotes = !inQuotes;
+              } else if (char === ',' && !inQuotes) {
+                tokens.push(current.trim());
+                current = '';
+              } else {
+                current += char;
+              }
+            }
+            if (current) tokens.push(current.trim());
+
+            if (tokens.length >= 8) {
+              txs.push({
+                id: tokens[0].replace(/^'|'$/g, ''),
+                date: tokens[1].replace(/^'|'$/g, ''),
+                type: tokens[2].replace(/^'|'$/g, ''),
+                category: tokens[3].replace(/^'|'$/g, ''),
+                amount: parseFloat(tokens[4]) || 0,
+                note: tokens[5].replace(/^'|'$/g, ''),
+                created_at: tokens[6].replace(/^'|'$/g, ''),
+                updated_at: tokens[7].replace(/^'|'$/g, ''),
+                sync_status: tokens[8] ? tokens[8].replace(/^'|'$/g, '') : 'pending_add'
+              });
+            }
+          }
+        }
+      });
+
+      if (txs.length > 0) {
+        const existing = this._loadAll();
+        const map = new Map(existing.map(t => [t.id, t]));
+        txs.forEach(t => map.set(t.id, t));
+        const merged = Array.from(map.values());
+        this.saveTransactions(merged);
+      }
+
+      return { imported_transactions: txs.length };
+    }
   }
 
   const dbInstance = new DatabaseManager();

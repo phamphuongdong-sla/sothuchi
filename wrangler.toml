@@ -1,0 +1,9 @@
+name = "sothuchi-sqlite-backend"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sothuchi-db"
+database_id = "90b51b90-354d-4b56-bf5e-ce93835cea77"
+
