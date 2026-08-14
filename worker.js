@@ -50,6 +50,7 @@ export default {
       if (path === '/api/fetchAll' || action === 'fetchAll') {
         const txs = await db.prepare('SELECT * FROM transactions ORDER BY date DESC, created_at DESC').all();
         const cats = await db.prepare('SELECT * FROM categories ORDER BY sort_order ASC').all();
+        const wallets = await db.prepare('SELECT * FROM wallets ORDER BY is_default DESC').all().catch(() => ({ results: [] }));
         const assets = await db.prepare('SELECT * FROM assets').all().catch(() => ({ results: [] }));
         const liabilities = await db.prepare('SELECT * FROM liabilities').all().catch(() => ({ results: [] }));
         const loans = await db.prepare('SELECT * FROM loans').all().catch(() => ({ results: [] }));
@@ -59,6 +60,7 @@ export default {
           status: 'success',
           transactions: txs.results || [],
           categories: cats.results || [],
+          wallets: wallets.results || [],
           assets: assets.results || [],
           liabilities: liabilities.results || [],
           loans: loans.results || [],
@@ -80,6 +82,7 @@ export default {
 
         const transactions = body.transactions || [];
         const categories = body.categories || [];
+        const wallets = body.wallets || [];
         const assets = body.assets || [];
         const liabilities = body.liabilities || [];
         const loans = body.loans || [];
@@ -96,14 +99,16 @@ export default {
           } else if (tx.sync_status === 'pending_add' || tx.sync_status === 'pending_update' || tx.sync_status === 'synced') {
             statements.push(
               db.prepare(`
-                INSERT INTO transactions (id, date, type, category, amount, note, created_at, updated_at, sync_status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'synced')
+                INSERT INTO transactions (id, date, type, category, amount, note, wallet_id, wallet_name, created_at, updated_at, sync_status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced')
                 ON CONFLICT(id) DO UPDATE SET
                   date = excluded.date,
                   type = excluded.type,
                   category = excluded.category,
                   amount = excluded.amount,
                   note = excluded.note,
+                  wallet_id = excluded.wallet_id,
+                  wallet_name = excluded.wallet_name,
                   updated_at = excluded.updated_at,
                   sync_status = 'synced'
               `).bind(
@@ -113,11 +118,42 @@ export default {
                 String(tx.category),
                 Number(tx.amount) || 0,
                 String(tx.note || ''),
+                String(tx.wallet_id || 'wallet_cash'),
+                String(tx.wallet_name || 'Ví tiền mặt'),
                 String(tx.created_at || new Date().toISOString()),
                 String(tx.updated_at || new Date().toISOString())
               )
             );
             syncedIds.push(tx.id);
+          }
+        }
+
+        // Wallets Upserts
+        for (const w of wallets) {
+          if (w.name) {
+            statements.push(
+              db.prepare(`
+                INSERT INTO wallets (id, name, type, icon, color, balance, is_default, is_hidden)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                  name = excluded.name,
+                  type = excluded.type,
+                  icon = excluded.icon,
+                  color = excluded.color,
+                  balance = excluded.balance,
+                  is_default = excluded.is_default,
+                  is_hidden = excluded.is_hidden
+              `).bind(
+                String(w.id || 'wallet_' + Date.now()),
+                String(w.name),
+                String(w.type || 'cash'),
+                String(w.icon || '💵'),
+                String(w.color || '#10b981'),
+                Number(w.balance) || 0,
+                w.is_default ? 1 : 0,
+                w.is_hidden ? 1 : 0
+              )
+            );
           }
         }
 

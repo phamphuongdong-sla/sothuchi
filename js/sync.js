@@ -132,12 +132,13 @@
       const pending = all.filter(t => t.sync_status && t.sync_status !== 'synced');
       const deduped = Array.from(new Map(pending.map(t => [t.id, t])).values());
 
+      const wallets = db.getWallets ? db.getWallets(true) : [];
       const assets = db.getAssets ? db.getAssets() : [];
       const liabilities = db.getLiabilities ? db.getLiabilities() : [];
       const loans = db.getLoans ? db.getLoans() : [];
       const auditLogs = db.getAuditLogs ? db.getAuditLogs() : [];
 
-      if (!deduped.length && !assets.length && !liabilities.length && !loans.length && !auditLogs.length) {
+      if (!deduped.length && !wallets.length && !assets.length && !liabilities.length && !loans.length && !auditLogs.length) {
         this._updateStatus('success');
         return { success: true, syncedCount: 0 };
       }
@@ -148,6 +149,7 @@
       const payloadObj = {
         action: 'syncBatch',
         transactions: deduped,
+        wallets: wallets,
         assets: assets,
         liabilities: liabilities,
         loans: loans,
@@ -301,6 +303,14 @@
         if (Array.isArray(json.categories) && json.categories.length > 0) {
           const catMgr = global.CategoryManager;
           catMgr?.mergeRemoteCategories?.(json.categories);
+        }
+
+        // Merge remote wallets if available
+        if (Array.isArray(json.wallets) && json.wallets.length > 0 && db.getWallets) {
+          const existingWallets = db.getWallets(true);
+          const walletMap = new Map(existingWallets.map(w => [w.id, w]));
+          json.wallets.forEach(w => walletMap.set(w.id, w));
+          db.saveWallets(Array.from(walletMap.values()));
         }
 
         // Merge remote assets, liabilities, loans if available

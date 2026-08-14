@@ -57,6 +57,7 @@
         query: '',
         category: 'all',
         type: 'all',
+        wallet: 'all',
         startDate: '',
         endDate: '',
         preset: 'this_month'
@@ -85,7 +86,7 @@
 
       const f = { ...this.currentFilters, ...overrides };
       const query = (f.query || '').trim().toLowerCase();
-      const { category, type, startDate, endDate } = f;
+      const { category, type, wallet, startDate, endDate } = f;
 
       // Inverted date range → empty
       if (startDate && endDate && startDate > endDate) return [];
@@ -94,6 +95,7 @@
         if (startDate && tx.date < startDate) return false;
         if (endDate && tx.date > endDate) return false;
         if (type && type !== 'all' && tx.type !== type) return false;
+        if (wallet && wallet !== 'all' && (tx.wallet_id || 'wallet_cash') !== wallet) return false;
 
         // Category filter: match subcategory name or group name
         if (category && category !== 'all') {
@@ -563,6 +565,13 @@
       // Category filter
       document.getElementById('filter-category')?.addEventListener('change', e => {
         this.currentFilters.category = e.target.value;
+        this.pagination.visibleCount = this.pagination.pageSize;
+        this.render();
+      });
+
+      // Wallet filter
+      document.getElementById('filter-wallet')?.addEventListener('change', e => {
+        this.currentFilters.wallet = e.target.value;
         this.pagination.visibleCount = this.pagination.pageSize;
         this.render();
       });

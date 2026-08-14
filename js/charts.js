@@ -69,8 +69,15 @@
      */
     filterTransactionsByDateRange(transactions = [], overrideRange = null) {
       const activeTransactions = transactions.filter(t => t.sync_status !== 'pending_delete');
+
+      const selectedWallet = typeof document !== 'undefined' ? (document.getElementById('filter-report-wallet')?.value || 'all') : 'all';
+      let walletFiltered = activeTransactions;
+      if (selectedWallet !== 'all') {
+        walletFiltered = walletFiltered.filter(t => (t.wallet_id || 'wallet_cash') === selectedWallet);
+      }
+
       const range = overrideRange || this.currentDateRange;
-      if (range === 'all_time') return activeTransactions;
+      if (range === 'all_time') return walletFiltered;
 
       const now = new Date();
       const currentYear = now.getFullYear();
@@ -854,6 +861,7 @@
       });
 
       if (typeof document !== 'undefined') {
+        document.getElementById('filter-report-wallet')?.addEventListener('change', () => this.renderCharts());
         const rangeSelect = document.getElementById('chart-date-range');
         const customContainer = document.getElementById('chart-custom-date-container');
         const startDateInput = document.getElementById('chart-start-date');

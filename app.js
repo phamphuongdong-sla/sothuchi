@@ -405,6 +405,47 @@ const TransactionForm = {
     if (categories.length) selectEl.value = categories[0].name;
   },
 
+  populateWallets() {
+    const db = window.DB;
+    if (!db?.getWallets) return;
+    const wallets = db.getWallets();
+
+    const targets = [
+      document.getElementById('input-wallet'),
+      document.getElementById('filter-wallet'),
+      document.getElementById('filter-report-wallet'),
+      document.getElementById('transfer-from-wallet'),
+      document.getElementById('transfer-to-wallet')
+    ];
+
+    targets.forEach(selectEl => {
+      if (!selectEl) return;
+      const isFilter = selectEl.id === 'filter-wallet' || selectEl.id === 'filter-report-wallet';
+      const currentValue = selectEl.value;
+
+      selectEl.innerHTML = '';
+      if (isFilter) {
+        const opt = document.createElement('option');
+        opt.value = 'all';
+        opt.textContent = selectEl.id === 'filter-report-wallet' ? '🌐 Tất cả các ví' : 'Tất cả ví';
+        selectEl.appendChild(opt);
+      }
+
+      wallets.forEach(w => {
+        const opt = document.createElement('option');
+        opt.value = w.id;
+        const fmtBal = db.formatVND ? db.formatVND(w.balance) : `${w.balance} ₫`;
+        opt.textContent = `${w.icon ? w.icon + ' ' : ''}${w.name} (${fmtBal})`;
+        if (w.is_default && !isFilter && !currentValue) opt.selected = true;
+        selectEl.appendChild(opt);
+      });
+
+      if (currentValue && selectEl.querySelector(`option[value="${currentValue}"]`)) {
+        selectEl.value = currentValue;
+      }
+    });
+  },
+
   resetForm() {
     document.getElementById('transaction-form')?.reset();
     const amountInput = document.getElementById('input-amount');
@@ -416,6 +457,7 @@ const TransactionForm = {
     const dateInput = document.getElementById('input-date');
     if (dateInput) dateInput.value = this._todayString();
     this.populateCategories('expense');
+    this.populateWallets();
   },
 
   handleAmountInput(e) {
@@ -446,6 +488,8 @@ const TransactionForm = {
       container = document.getElementById('amount-in-words');
     } else if (input.id === 'edit-tx-amount') {
       container = document.getElementById('edit-amount-in-words');
+    } else if (input.id === 'transfer-amount') {
+      container = document.getElementById('transfer-amount-words');
     }
     if (!container && input.closest) {
       container = input.closest('.form-group')?.querySelector('.amount-in-words');
@@ -473,6 +517,11 @@ const TransactionForm = {
     const rawDate = document.getElementById('input-date')?.value;
     const date = window.formatLocalYMD ? window.formatLocalYMD(rawDate) : (rawDate || this._todayString());
     const note = (document.getElementById('input-note')?.value || '').trim();
+    const wallet_id = document.getElementById('input-wallet')?.value || 'wallet_cash';
+
+    const db = window.DB;
+    const walletObj = db?.getWallet ? db.getWallet(wallet_id) : null;
+    const wallet_name = walletObj ? walletObj.name : 'Ví tiền mặt';
 
     if (!amount || amount <= 0) {
       Toast.show('Số tiền phải là số dương hợp lệ', 'error');
@@ -483,23 +532,23 @@ const TransactionForm = {
       return null;
     }
 
-    const db = window.DB;
     if (!db?.addTransaction) {
       Toast.show('Lỗi hệ thống: Chưa khởi tạo cơ sở dữ liệu!', 'error');
       return null;
     }
 
-    const newTx = db.addTransaction({ type, amount, category, date, note });
+    const newTx = db.addTransaction({ type, amount, category, date, note, wallet_id, wallet_name });
     const fmtVND = window.formatVND ? window.formatVND(amount) : `${amount} ₫`;
-    const dateParts = (date || '').split('-');
-    const fmtDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : date;
 
-    Toast.show(`Đã lưu ${type === 'expense' ? 'chi tiêu' : 'thu nhập'} ${fmtVND} (Ngày ${fmtDate})!`, 'success');
+    Toast.show(`Đã lưu ${type === 'expense' ? 'chi tiêu' : 'thu nhập'} ${fmtVND} vào ${wallet_name}!`, 'success');
     this.resetForm();
 
     try {
       window.dispatchEvent(new CustomEvent('transactionadded', { detail: { transaction: newTx } }));
     } catch (_) {}
+
+    this.populateWallets();
+    NetWorthManager.renderNetWorthView();
 
     return newTx;
   },
@@ -745,6 +794,34 @@ const NetWorthManager = {
       nwEl.className = nw.netWorth < 0 ? 'summary-value negative-balance' : 'summary-value positive-balance';
     }
 
+    // 0. Wallets Grid Rendering
+    const wallets = db.getWallets(true);
+    const walletsContainer = document.getElementById('wallets-list-container');
+    if (walletsContainer) {
+      const typeLabels = { cash: 'Tiền mặt', bank: 'Ngân hàng', ewallet: 'Ví điện tử', credit: 'Thẻ tín dụng' };
+      let wHtml = '';
+      wallets.forEach(w => {
+        wHtml += `
+          <div class="wallet-card" style="border-left: 4px solid ${w.color || '#10b981'};">
+            <div class="wallet-card-header">
+              <div class="wallet-title-wrapper">
+                <span class="wallet-icon">${w.icon || '💵'}</span>
+                <span class="wallet-name">${w.name}</span>
+                ${w.is_default ? '<span class="wallet-default-pill">Mặc định</span>' : ''}
+              </div>
+              <span class="wallet-type-badge">${typeLabels[w.type] || w.type}</span>
+            </div>
+            <div class="wallet-balance">${db.formatVND(w.balance)}</div>
+            <div class="wallet-actions">
+              <button type="button" class="btn-edit-wallet icon-action-btn" data-edit-wallet="${w.id}" title="Chỉnh sửa ví">✏️</button>
+              <button type="button" class="btn-delete-wallet icon-action-btn" data-delete-wallet="${w.id}" title="Xóa ví">&times;</button>
+            </div>
+          </div>
+        `;
+      });
+      walletsContainer.innerHTML = wHtml;
+    }
+
     // 2. Assets List
     const assets = db.getAssets();
     const assetContainer = document.getElementById('assets-list-container');
@@ -935,6 +1012,23 @@ const NetWorthManager = {
     Router.on('networth', () => this.renderNetWorthView());
 
     // Modal open buttons (Reset inputs for new addition)
+    document.getElementById('btn-open-add-wallet')?.addEventListener('click', () => {
+      document.getElementById('form-wallet')?.reset();
+      const idInput = document.getElementById('wallet-id');
+      if (idInput) idInput.value = '';
+      const titleEl = document.getElementById('wallet-modal-title');
+      if (titleEl) titleEl.textContent = '💼 Thêm Ví Mới';
+      document.getElementById('modal-wallet')?.removeAttribute('hidden');
+    });
+
+    document.getElementById('btn-open-transfer')?.addEventListener('click', () => {
+      document.getElementById('form-transfer')?.reset();
+      TransactionForm.populateWallets();
+      const dateInput = document.getElementById('transfer-date');
+      if (dateInput) dateInput.value = TransactionForm._todayString();
+      document.getElementById('modal-transfer')?.removeAttribute('hidden');
+    });
+
     document.getElementById('btn-open-add-asset')?.addEventListener('click', () => {
       document.getElementById('form-asset')?.reset();
       const idInput = document.getElementById('asset-id');
@@ -973,12 +1067,57 @@ const NetWorthManager = {
     });
 
     // Close modal triggers
-    ['asset', 'liability', 'loan', 'recurring', 'audit', 'repay'].forEach(name => {
+    ['asset', 'liability', 'loan', 'recurring', 'audit', 'repay', 'wallet', 'transfer'].forEach(name => {
       document.querySelectorAll(`[data-close-modal="${name}"]`).forEach(btn => {
         btn.addEventListener('click', () => {
           document.getElementById(`modal-${name}`)?.setAttribute('hidden', '');
         });
       });
+    });
+
+    // Wallet Form submit
+    document.getElementById('form-wallet')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const db = window.DB;
+      if (!db) return;
+      const id = document.getElementById('wallet-id')?.value || undefined;
+      const name = document.getElementById('wallet-name')?.value;
+      const type = document.getElementById('wallet-type')?.value;
+      const icon = document.getElementById('wallet-icon')?.value || '💵';
+      const initial_balance = parseRawAmount(document.getElementById('wallet-initial-balance')?.value);
+      const color = document.getElementById('wallet-color')?.value || '#10b981';
+      const is_default = document.getElementById('wallet-is-default')?.checked;
+
+      db.saveWallet({ id, name, type, icon, initial_balance, balance: initial_balance, color, is_default });
+      document.getElementById('modal-wallet')?.setAttribute('hidden', '');
+      TransactionForm.populateWallets();
+      this.renderNetWorthView();
+      Toast.show(id ? 'Đã cập nhật thông tin ví' : 'Đã tạo ví mới thành công', 'success');
+    });
+
+    // Transfer Form submit
+    document.getElementById('form-transfer')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const db = window.DB;
+      if (!db) return;
+      const fromId = document.getElementById('transfer-from-wallet')?.value;
+      const toId = document.getElementById('transfer-to-wallet')?.value;
+      const amount = parseRawAmount(document.getElementById('transfer-amount')?.value);
+      const date = document.getElementById('transfer-date')?.value;
+      const note = document.getElementById('transfer-note')?.value;
+
+      try {
+        const res = db.transferBetweenWallets(fromId, toId, amount, note, date);
+        document.getElementById('modal-transfer')?.setAttribute('hidden', '');
+        TransactionForm.populateWallets();
+        this.renderNetWorthView();
+        Toast.show(`Đã chuyển ${db.formatVND(amount)} thành công!`, 'success');
+        try {
+          window.dispatchEvent(new CustomEvent('transactionadded', { detail: { transaction: res.outTx } }));
+        } catch (_) {}
+      } catch (err) {
+        Toast.show(err.message, 'error');
+      }
     });
 
     // Asset Form submit
@@ -1072,6 +1211,41 @@ const NetWorthManager = {
     document.addEventListener('click', (e) => {
       const db = window.DB;
       if (!db) return;
+
+      // EDIT WALLET
+      const editWalletBtn = e.target?.closest('[data-edit-wallet]');
+      if (editWalletBtn) {
+        const id = editWalletBtn.getAttribute('data-edit-wallet');
+        const wallet = db.getWallet(id);
+        if (wallet) {
+          document.getElementById('wallet-id').value = wallet.id;
+          document.getElementById('wallet-name').value = wallet.name;
+          document.getElementById('wallet-type').value = wallet.type || 'cash';
+          document.getElementById('wallet-icon').value = wallet.icon || '💵';
+          document.getElementById('wallet-initial-balance').value = wallet.balance || 0;
+          document.getElementById('wallet-color').value = wallet.color || '#10b981';
+          document.getElementById('wallet-is-default').checked = !!wallet.is_default;
+          const titleEl = document.getElementById('wallet-modal-title');
+          if (titleEl) titleEl.textContent = '✏️ Chỉnh Sửa Ví';
+          document.getElementById('modal-wallet')?.removeAttribute('hidden');
+        }
+      }
+
+      // DELETE WALLET
+      const deleteWalletBtn = e.target?.closest('[data-delete-wallet]');
+      if (deleteWalletBtn) {
+        const id = deleteWalletBtn.getAttribute('data-delete-wallet');
+        if (confirm('Bạn có chắc chắn muốn xóa ví này không?')) {
+          try {
+            db.deleteWallet(id);
+            TransactionForm.populateWallets();
+            this.renderNetWorthView();
+            Toast.show('Đã xóa ví thành công', 'success');
+          } catch (err) {
+            Toast.show(err.message, 'error');
+          }
+        }
+      }
 
       // EDIT ASSET
       const editAssetBtn = e.target?.closest('[data-edit-asset]');
@@ -1238,6 +1412,7 @@ const App = {
       Router.init();
       registerServiceWorker();
       TransactionForm.init();
+      TransactionForm.populateWallets();
 
       getModule('HistoryUI', 'HistoryManager')?.initEventListeners?.();
       getModule('ChartsUI', 'Charts')?.initEventListeners?.();

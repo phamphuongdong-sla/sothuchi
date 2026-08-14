@@ -10,12 +10,20 @@
     TX_ALT: 'so_thu_chi_transactions',
     CAT: 'stc_categories',
     CAT_ALT: 'so_thu_chi_categories',
+    WALLET: 'stc_wallets',
     ASSET: 'stc_assets',
     LIABILITY: 'stc_liabilities',
     LOAN: 'stc_loans',
     RECURRING: 'stc_recurring',
     AUDIT: 'stc_audit_logs'
   };
+
+  const DEFAULT_WALLETS = [
+    { id: 'wallet_cash', name: 'Ví tiền mặt', type: 'cash', icon: '💵', color: '#10b981', balance: 0, is_default: 1, is_hidden: 0 },
+    { id: 'wallet_bank', name: 'Tài khoản Ngân hàng', type: 'bank', icon: '🏦', color: '#3b82f6', balance: 0, is_default: 0, is_hidden: 0 },
+    { id: 'wallet_momo', name: 'Ví MoMo / ZaloPay', type: 'ewallet', icon: '📱', color: '#ec4899', balance: 0, is_default: 0, is_hidden: 0 },
+    { id: 'wallet_credit', name: 'Thẻ tín dụng', type: 'credit', icon: '💳', color: '#f59e0b', balance: 0, is_default: 0, is_hidden: 0 }
+  ];
 
   function generateId(prefix) {
     return (prefix || 'tx') + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -44,13 +52,15 @@
     const now = new Date().toISOString();
     const created = tx.created_at || tx.createdAt || now;
     const updated = tx.updated_at || tx.updatedAt || created;
-    const type = tx.type === 'income' ? 'income' : 'expense';
+    const type = tx.type === 'transfer' ? 'transfer' : (tx.type === 'income' ? 'income' : 'expense');
     const amount = Number(tx.amount);
     const category = String(
       tx.category != null && tx.category !== ''
         ? tx.category
         : (type === 'income' ? 'Lương' : 'Ăn uống')
     ).trim();
+    const walletId = String(tx.wallet_id || tx.walletId || 'wallet_cash');
+    const walletName = String(tx.wallet_name || tx.walletName || 'Ví tiền mặt');
 
     return {
       id: String(tx.id || generateId('tx')),
@@ -59,6 +69,8 @@
       category,
       amount: isNaN(amount) ? 0 : amount,
       note: tx.note != null ? String(tx.note) : '',
+      wallet_id: walletId,
+      wallet_name: walletName,
       created_at: created,
       updated_at: updated,
       sync_status: tx.sync_status || 'pending_add'
@@ -250,6 +262,131 @@
       const catMgr = global.Categories || global.CategoryManager;
       if (catMgr?.saveToStorage) return catMgr.saveToStorage(cats);
       this._setItem(KEYS.CAT, JSON.stringify(cats || []), KEYS.CAT_ALT);
+    }
+
+    // Wallets Management
+    getWallets(includeHidden = false) {
+      const raw = this._getItem(KEYS.WALLET);
+      let wallets = [];
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) wallets = parsed;
+        } catch (_) {}
+      }
+      if (wallets.length === 0) {
+        wallets = JSON.parse(JSON.stringify(DEFAULT_WALLETS));
+        this.saveWallets(wallets);
+      }
+      this.recalculateWalletBalances(wallets);
+      return includeHidden ? wallets : wallets.filter(w => !w.is_hidden);
+    }
+
+    getWallet(id) {
+      const wallets = this.getWallets(true);
+      return wallets.find(w => w.id === id) || wallets[0] || null;
+    }
+
+    saveWallets(wallets) {
+      this._setItem(KEYS.WALLET, JSON.stringify(wallets || []));
+    }
+
+    saveWallet(data) {
+      if (!data || !data.name) throw new Error('Tên ví không được để trống');
+      const wallets = this.getWallets(true);
+      const existingIdx = data.id ? wallets.findIndex(w => w.id === data.id) : -1;
+      const now = new Date().toISOString();
+      const newWallet = {
+        id: data.id || generateId('wallet'),
+        name: String(data.name).trim(),
+        type: data.type || 'cash',
+        icon: data.icon || '💵',
+        color: data.color || '#10b981',
+        balance: Number(data.balance) || 0,
+        is_default: data.is_default ? 1 : 0,
+        is_hidden: data.is_hidden ? 1 : 0,
+        updated_at: now
+      };
+
+      if (newWallet.is_default) {
+        wallets.forEach(w => w.is_default = 0);
+      }
+
+      if (existingIdx !== -1) {
+        wallets[existingIdx] = { ...wallets[existingIdx], ...newWallet };
+      } else {
+        wallets.push(newWallet);
+      }
+      this.saveWallets(wallets);
+      this.logAuditEvent(existingIdx !== -1 ? 'update' : 'add', 'wallet', newWallet.id, existingIdx !== -1 ? wallets[existingIdx] : null, newWallet);
+      return newWallet;
+    }
+
+    deleteWallet(id) {
+      let wallets = this.getWallets(true);
+      if (wallets.length <= 1) throw new Error('Cần giữ lại ít nhất 1 ví trong hệ thống');
+      const target = wallets.find(w => w.id === id);
+      wallets = wallets.filter(w => w.id !== id);
+      if (!wallets.some(w => w.is_default)) wallets[0].is_default = 1;
+      this.saveWallets(wallets);
+      this.logAuditEvent('delete', 'wallet', id, target, null);
+      return true;
+    }
+
+    recalculateWalletBalances(walletsList) {
+      const txs = this.getTransactions();
+      const balanceMap = new Map();
+      (walletsList || []).forEach(w => balanceMap.set(w.id, Number(w.initial_balance || 0)));
+
+      txs.forEach(tx => {
+        const wId = tx.wallet_id || 'wallet_cash';
+        const current = balanceMap.get(wId) || 0;
+        if (tx.type === 'income') {
+          balanceMap.set(wId, current + tx.amount);
+        } else if (tx.type === 'expense') {
+          balanceMap.set(wId, current - tx.amount);
+        }
+      });
+
+      (walletsList || []).forEach(w => {
+        w.balance = balanceMap.get(w.id) || 0;
+      });
+    }
+
+    transferBetweenWallets(fromId, toId, amount, note, date) {
+      const numAmount = Number(amount);
+      if (isNaN(numAmount) || numAmount <= 0) throw new Error('Số tiền chuyển phải > 0');
+      if (fromId === toId) throw new Error('Ví nguồn và ví đích không được trùng nhau');
+
+      const fromWallet = this.getWallet(fromId);
+      const toWallet = this.getWallet(toId);
+      if (!fromWallet || !toWallet) throw new Error('Ví không hợp lệ');
+
+      const nowDate = date || new Date().toISOString().split('T')[0];
+      const transferNote = note ? `Chuyển sang ${toWallet.name}: ${note}` : `Chuyển tiền sang ${toWallet.name}`;
+      const receiveNote = note ? `Nhận từ ${fromWallet.name}: ${note}` : `Nhận tiền từ ${fromWallet.name}`;
+
+      const outTx = this.addTransaction({
+        date: nowDate,
+        type: 'expense',
+        category: 'Chuyển tiền nội bộ',
+        amount: numAmount,
+        note: transferNote,
+        wallet_id: fromWallet.id,
+        wallet_name: fromWallet.name
+      });
+
+      const inTx = this.addTransaction({
+        date: nowDate,
+        type: 'income',
+        category: 'Chuyển tiền nội bộ',
+        amount: numAmount,
+        note: receiveNote,
+        wallet_id: toWallet.id,
+        wallet_name: toWallet.name
+      });
+
+      return { outTx, inTx };
     }
 
     // Audit Log Trail
@@ -558,12 +695,21 @@
       sql += `-- Generated on: ${new Date().toISOString()}\n`;
       sql += `-- ============================================================================\n\n`;
 
-      // 1. Transactions
+      // 1. Wallets
+      sql += `-- Bảng Wallets\n`;
+      sql += `CREATE TABLE IF NOT EXISTS wallets (id TEXT PRIMARY KEY, name TEXT, type TEXT, icon TEXT, color TEXT, balance REAL, is_default INTEGER, is_hidden INTEGER);\n`;
+      const wallets = this.getWallets(true);
+      wallets.forEach(w => {
+        sql += `INSERT OR REPLACE INTO wallets VALUES (${escape(w.id)}, ${escape(w.name)}, ${escape(w.type)}, ${escape(w.icon)}, ${escape(w.color)}, ${w.balance || 0}, ${w.is_default ? 1 : 0}, ${w.is_hidden ? 1 : 0});\n`;
+      });
+      sql += `\n`;
+
+      // 2. Transactions
       sql += `-- Bảng Transactions\n`;
-      sql += `CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, date TEXT, type TEXT, category TEXT, amount REAL, note TEXT, created_at TEXT, updated_at TEXT, sync_status TEXT);\n`;
+      sql += `CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, date TEXT, type TEXT, category TEXT, amount REAL, note TEXT, wallet_id TEXT, wallet_name TEXT, created_at TEXT, updated_at TEXT, sync_status TEXT);\n`;
       const txs = this._loadAll();
       txs.forEach(t => {
-        sql += `INSERT OR REPLACE INTO transactions VALUES (${escape(t.id)}, ${escape(t.date)}, ${escape(t.type)}, ${escape(t.category)}, ${t.amount || 0}, ${escape(t.note)}, ${escape(t.created_at)}, ${escape(t.updated_at)}, ${escape(t.sync_status)});\n`;
+        sql += `INSERT OR REPLACE INTO transactions VALUES (${escape(t.id)}, ${escape(t.date)}, ${escape(t.type)}, ${escape(t.category)}, ${t.amount || 0}, ${escape(t.note)}, ${escape(t.wallet_id || 'wallet_cash')}, ${escape(t.wallet_name || 'Ví tiền mặt')}, ${escape(t.created_at)}, ${escape(t.updated_at)}, ${escape(t.sync_status)});\n`;
       });
       sql += `\n`;
 

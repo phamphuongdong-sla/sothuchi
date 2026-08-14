@@ -143,6 +143,14 @@
               </select>
             </div>
 
+            <!-- Wallet Select Dropdown -->
+            <div class="form-group">
+              <label for="input-wallet" class="form-label">Ví / Tài khoản <span class="required-star">*</span></label>
+              <select id="input-wallet" name="wallet_id" class="form-control" required aria-required="true">
+                <option value="wallet_cash">💵 Ví tiền mặt</option>
+              </select>
+            </div>
+
             <!-- Date Picker Field -->
             <div class="form-group">
               <label for="input-date" class="form-label">Ngày giao dịch <span class="required-star">*</span></label>
@@ -200,6 +208,13 @@
               </div>
 
               <div class="filter-group">
+                <label for="filter-wallet" class="filter-label">Ví / Tài khoản</label>
+                <select id="filter-wallet" class="form-control form-control-sm">
+                  <option value="all">Tất cả ví</option>
+                </select>
+              </div>
+
+              <div class="filter-group">
                 <label for="filter-start-date" class="filter-label">Từ ngày</label>
                 <input type="date" id="filter-start-date" class="form-control form-control-sm">
               </div>
@@ -227,11 +242,17 @@
               <p class="card-subtitle">Thống kê cơ cấu thu chi, tài sản ròng và quy tắc 50/30/20</p>
             </div>
 
-            <!-- Reports Month / Year Selector -->
-            <div class="reports-month-selector">
-              <button type="button" id="btn-prev-month" class="icon-btn btn-sm" aria-label="Tháng trước">◀</button>
-              <span id="reports-month-label" class="reports-month-text">Tháng 08/2026</span>
-              <button type="button" id="btn-next-month" class="icon-btn btn-sm" aria-label="Tháng sau">▶</button>
+            <div class="reports-header-actions" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+              <select id="filter-report-wallet" class="form-control form-control-sm" style="min-width:150px;">
+                <option value="all">🌐 Tất cả các ví</option>
+              </select>
+
+              <!-- Reports Month / Year Selector -->
+              <div class="reports-month-selector">
+                <button type="button" id="btn-prev-month" class="icon-btn btn-sm" aria-label="Tháng trước">◀</button>
+                <span id="reports-month-label" class="reports-month-text">Tháng 08/2026</span>
+                <button type="button" id="btn-next-month" class="icon-btn btn-sm" aria-label="Tháng sau">▶</button>
+              </div>
             </div>
           </div>
         </div>
@@ -360,6 +381,23 @@
               <span class="summary-label">Tài Sản Ròng (Net Worth)</span>
               <span id="nw-net-worth" class="summary-value">0 ₫</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Wallets & Accounts Management Card -->
+        <div class="card chart-card mb-3">
+          <div class="chart-card-header card-header--spaced">
+            <div>
+              <h4 class="chart-title">💼 Quản Lý Danh Sách Ví & Số Dư</h4>
+              <p class="card-subtitle">Theo dõi số dư riêng từng ví và thực hiện chuyển tiền nội bộ</p>
+            </div>
+            <div class="reports-export-actions">
+              <button type="button" id="btn-open-add-wallet" class="btn btn-primary btn-sm">➕ Thêm Ví Mới</button>
+              <button type="button" id="btn-open-transfer" class="btn btn-secondary btn-sm">🔄 Chuyển Tiền Giữa Các Ví</button>
+            </div>
+          </div>
+          <div id="wallets-list-container" class="wallets-grid">
+            <!-- Dynamic Wallets Cards rendered by app.js -->
           </div>
         </div>
 
@@ -1002,6 +1040,103 @@
       <div class="modal-footer form-actions">
         <button type="button" class="btn btn-secondary" data-close-modal="audit">Đóng</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add / Edit Wallet -->
+  <div id="modal-wallet" class="modal-backdrop" hidden aria-hidden="true">
+    <div class="modal-dialog card" role="dialog" aria-labelledby="wallet-modal-title">
+      <div class="modal-header">
+        <h3 id="wallet-modal-title" class="modal-title">💼 Thêm / Chỉnh Sửa Ví</h3>
+        <button type="button" class="modal-close-btn" data-close-modal="wallet" aria-label="Đóng">&times;</button>
+      </div>
+      <form id="form-wallet">
+        <input type="hidden" id="wallet-id">
+        <div class="modal-body">
+          <div class="form-group mb-2">
+            <label for="wallet-name" class="form-label-sm">Tên ví / Tài khoản <span class="required-star">*</span></label>
+            <input type="text" id="wallet-name" class="form-control" placeholder="Ví dụ: Tài khoản Vietcombank, Ví Tiền mặt..." required autocomplete="off">
+          </div>
+          <div class="filter-row mb-2">
+            <div class="form-group flex-1">
+              <label for="wallet-type" class="form-label-sm">Loại tài khoản</label>
+              <select id="wallet-type" class="form-control">
+                <option value="cash">💵 Ví Tiền mặt</option>
+                <option value="bank">🏦 Tài khoản Ngân hàng</option>
+                <option value="ewallet">📱 Ví Điện tử (MoMo/ZaloPay)</option>
+                <option value="credit">💳 Thẻ Tín dụng</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="wallet-icon" class="form-label-sm">Biểu tượng (Icon)</label>
+              <input type="text" id="wallet-icon" class="form-control" value="💵" maxlength="4">
+            </div>
+          </div>
+          <div class="filter-row mb-2">
+            <div class="form-group flex-1">
+              <label for="wallet-initial-balance" class="form-label-sm">Số dư ban đầu (VND)</label>
+              <input type="number" id="wallet-initial-balance" class="form-control" placeholder="0">
+            </div>
+            <div class="form-group flex-1">
+              <label for="wallet-color" class="form-label-sm">Màu chủ đạo</label>
+              <input type="color" id="wallet-color" class="form-control" value="#10b981" style="height:38px; padding:2px;">
+            </div>
+          </div>
+          <div class="form-group mt-2">
+            <label class="form-label-sm" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+              <input type="checkbox" id="wallet-is-default"> Đặt làm Ví mặc định khi ghi thu chi
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer form-actions">
+          <button type="button" class="btn btn-secondary" data-close-modal="wallet">Hủy</button>
+          <button type="submit" id="btn-save-wallet-submit" class="btn btn-primary">💾 Lưu Thông Tin Ví</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Internal Transfer Between Wallets -->
+  <div id="modal-transfer" class="modal-backdrop" hidden aria-hidden="true">
+    <div class="modal-dialog card" role="dialog" aria-labelledby="transfer-modal-title">
+      <div class="modal-header">
+        <h3 id="transfer-modal-title" class="modal-title">🔄 Chuyển Tiền Nội Bộ Giữa Các Ví</h3>
+        <button type="button" class="modal-close-btn" data-close-modal="transfer" aria-label="Đóng">&times;</button>
+      </div>
+      <form id="form-transfer">
+        <div class="modal-body">
+          <div class="filter-row mb-2">
+            <div class="form-group flex-1">
+              <label for="transfer-from-wallet" class="form-label-sm">Ví nguồn (Trừ tiền) <span class="required-star">*</span></label>
+              <select id="transfer-from-wallet" class="form-control" required></select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="transfer-to-wallet" class="form-label-sm">Ví đích (Cộng tiền) <span class="required-star">*</span></label>
+              <select id="transfer-to-wallet" class="form-control" required></select>
+            </div>
+          </div>
+          <div class="form-group mb-2">
+            <label for="transfer-amount" class="form-label-sm">Số tiền chuyển (VND) <span class="required-star">*</span></label>
+            <div class="input-wrapper amount-wrapper">
+              <input type="text" id="transfer-amount" class="form-control amount-input" placeholder="0" inputmode="numeric" required autocomplete="off">
+              <span class="currency-suffix">₫</span>
+            </div>
+            <div id="transfer-amount-words" class="amount-in-words" hidden></div>
+          </div>
+          <div class="form-group mb-2">
+            <label for="transfer-date" class="form-label-sm">Ngày chuyển</label>
+            <input type="date" id="transfer-date" class="form-control" required>
+          </div>
+          <div class="form-group mb-2">
+            <label for="transfer-note" class="form-label-sm">Ghi chú chuyển tiền</label>
+            <input type="text" id="transfer-note" class="form-control" placeholder="Ví dụ: Rút tiền ATM, Nạp tiền ví MoMo..." autocomplete="off">
+          </div>
+        </div>
+        <div class="modal-footer form-actions">
+          <button type="button" class="btn btn-secondary" data-close-modal="transfer">Hủy</button>
+          <button type="submit" id="btn-save-transfer-submit" class="btn btn-primary">🔄 Thực Hiện Chuyển Tiền</button>
+        </div>
+      </form>
     </div>
   </div>
 

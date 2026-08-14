@@ -1,38 +1,53 @@
 -- ============================================================================
 -- SỔ THU CHI CÁ NHÂN - SQLITE DATABASE SCHEMA (schema.sql)
--- Chuẩn hóa cho Cloudflare D1 / SQLite WASM / PocketBase / Turso
+-- Multi-Wallet & Enterprise Accounting System
 -- ============================================================================
 
--- 1. Bảng Giao Dịch (Transactions)
+-- 1. Bảng Danh Sách Ví / Tài Khoản (Wallets)
+CREATE TABLE IF NOT EXISTS wallets (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT DEFAULT 'cash',            -- 'cash', 'bank', 'ewallet', 'credit'
+  icon TEXT DEFAULT '💵',
+  color TEXT DEFAULT '#10b981',
+  balance REAL DEFAULT 0,
+  is_default INTEGER DEFAULT 0,        -- 1: Ví mặc định
+  is_hidden INTEGER DEFAULT 0          -- 0: Hiện, 1: Ẩn
+);
+
+-- 2. Bảng Giao Dịch (Transactions)
 CREATE TABLE IF NOT EXISTS transactions (
   id TEXT PRIMARY KEY,
   date TEXT NOT NULL,                  -- Định dạng YYYY-MM-DD
-  type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+  type TEXT NOT NULL CHECK(type IN ('income', 'expense', 'transfer')),
   category TEXT NOT NULL,
   amount REAL NOT NULL CHECK(amount >= 0),
   note TEXT DEFAULT '',
+  wallet_id TEXT DEFAULT 'wallet_cash',
+  wallet_name TEXT DEFAULT 'Ví tiền mặt',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   sync_status TEXT DEFAULT 'synced'
 );
 
--- Chỉ mục tối ưu tốc độ lọc theo Ngày & Hạng Mục
+-- Chỉ mục tối ưu tốc độ lọc theo Ngày, Hạng Mục & Ví
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date DESC);
 CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);
+CREATE INDEX IF NOT EXISTS idx_transactions_wallet ON transactions(wallet_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);
 
--- 2. Bảng Hạng Mục Thu Chi (Categories)
+-- 3. Bảng Hạng Mục Thu Chi (Categories)
 CREATE TABLE IF NOT EXISTS categories (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
-  type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+  type TEXT NOT NULL CHECK(type IN ('income', 'expense', 'transfer')),
   icon TEXT DEFAULT '📁',
   color TEXT DEFAULT '#4f46e5',
   is_hidden INTEGER DEFAULT 0,         -- 0: Hiện, 1: Ẩn
   sort_order INTEGER DEFAULT 0
 );
 
--- 3. Bảng Tài Sản (Assets) - Net Worth
+-- 4. Bảng Tài Sản (Assets) - Net Worth
 CREATE TABLE IF NOT EXISTS assets (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -42,7 +57,7 @@ CREATE TABLE IF NOT EXISTS assets (
   updated_at TEXT NOT NULL
 );
 
--- 4. Bảng Khoản Nợ (Liabilities) - Net Worth
+-- 5. Bảng Khoản Nợ (Liabilities) - Net Worth
 CREATE TABLE IF NOT EXISTS liabilities (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -53,7 +68,7 @@ CREATE TABLE IF NOT EXISTS liabilities (
   updated_at TEXT NOT NULL
 );
 
--- 5. Bảng Vay & Cho Vay (Loans)
+-- 6. Bảng Vay & Cho Vay (Loans)
 CREATE TABLE IF NOT EXISTS loans (
   id TEXT PRIMARY KEY,
   type TEXT NOT NULL CHECK(type IN ('loan', 'debt')), -- 'loan': Cho vay, 'debt': Vay nợ
@@ -67,12 +82,13 @@ CREATE TABLE IF NOT EXISTS loans (
   updated_at TEXT NOT NULL
 );
 
--- 6. Bảng Chi Tiêu Định Kỳ (Recurring Ledger)
+-- 7. Bảng Chi Tiêu Định Kỳ (Recurring Ledger)
 CREATE TABLE IF NOT EXISTS recurring (
   id TEXT PRIMARY KEY,
   type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
   amount REAL DEFAULT 0 CHECK(amount >= 0),
   category TEXT NOT NULL,
+  wallet_id TEXT DEFAULT 'wallet_cash',
   note TEXT DEFAULT '',
   frequency TEXT DEFAULT 'monthly',
   day_of_month INTEGER DEFAULT 1 CHECK(day_of_month BETWEEN 1 AND 31),
@@ -80,22 +96,28 @@ CREATE TABLE IF NOT EXISTS recurring (
   is_active INTEGER DEFAULT 1          -- 1: Bật, 0: Tắt
 );
 
--- 7. Bảng Lịch Sử Sửa Đổi (Audit Logs)
+-- 8. Bảng Lịch Sử Sửa Đổi (Audit Logs)
 CREATE TABLE IF NOT EXISTS audit_logs (
   id TEXT PRIMARY KEY,
   timestamp TEXT NOT NULL,
   action TEXT NOT NULL,                -- 'add', 'update', 'delete', 'revert'
-  entity_type TEXT NOT NULL,           -- 'transaction', 'category', 'asset', ...
+  entity_type TEXT NOT NULL,           -- 'transaction', 'category', 'asset', 'wallet', ...
   entity_id TEXT NOT NULL,
-  old_data_json TEXT,                  -- Chuỗi JSON dữ liệu cũ
-  new_data_json TEXT                   -- Chuỗi JSON dữ liệu mới
+  old_data_json TEXT,
+  new_data_json TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp DESC);
 
 -- ============================================================================
--- DỮ LIỆU MẶC ĐỊNH CHO HẠNG MỤC (DEFAULT CATEGORIES)
+-- DỮ LIỆU MẶC ĐỊNH (DEFAULT WALLETS & CATEGORIES)
 -- ============================================================================
+INSERT OR IGNORE INTO wallets (id, name, type, icon, color, balance, is_default, is_hidden) VALUES
+  ('wallet_cash', 'Ví tiền mặt', 'cash', '💵', '#10b981', 0, 1, 0),
+  ('wallet_bank', 'Tài khoản Ngân hàng', 'bank', '🏦', '#3b82f6', 0, 0, 0),
+  ('wallet_momo', 'Ví MoMo / ZaloPay', 'ewallet', '📱', '#ec4899', 0, 0, 0),
+  ('wallet_credit', 'Thẻ tín dụng', 'credit', '💳', '#f59e0b', 0, 0, 0);
+
 INSERT OR IGNORE INTO categories (id, name, type, icon, color, is_hidden, sort_order) VALUES
   ('cat_inc_1', 'Lương', 'income', '💵', '#10b981', 0, 1),
   ('cat_inc_2', 'Thưởng', 'income', '🎁', '#059669', 0, 2),
@@ -110,4 +132,5 @@ INSERT OR IGNORE INTO categories (id, name, type, icon, color, is_hidden, sort_o
   ('cat_exp_6', 'Y tế & Sức khỏe', 'expense', '🏥', '#06b6d4', 0, 11),
   ('cat_exp_7', 'Giáo dục', 'expense', '📚', '#3b82f6', 0, 12),
   ('cat_exp_8', 'Trả nợ vay', 'expense', '💸', '#64748b', 0, 13),
-  ('cat_exp_9', 'Chi khác', 'expense', '📦', '#6b7280', 0, 14);
+  ('cat_exp_9', 'Chi khác', 'expense', '📦', '#6b7280', 0, 14),
+  ('cat_trf_1', 'Chuyển tiền nội bộ', 'transfer', '🔄', '#6366f1', 0, 15);
