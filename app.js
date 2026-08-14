@@ -944,7 +944,7 @@ const NetWorthManager = {
     });
 
     // Close modal triggers
-    ['asset', 'liability', 'loan', 'recurring', 'audit'].forEach(name => {
+    ['asset', 'liability', 'loan', 'recurring', 'audit', 'repay'].forEach(name => {
       document.querySelectorAll(`[data-close-modal="${name}"]`).forEach(btn => {
         btn.addEventListener('click', () => {
           document.getElementById(`modal-${name}`)?.setAttribute('hidden', '');
@@ -959,7 +959,7 @@ const NetWorthManager = {
       if (!db) return;
       const name = document.getElementById('asset-name')?.value;
       const category = document.getElementById('asset-category')?.value;
-      const value = document.getElementById('asset-value')?.value;
+      const value = parseRawAmount(document.getElementById('asset-value')?.value);
       const note = document.getElementById('asset-note')?.value;
 
       db.saveAsset({ name, category, value, note });
@@ -975,7 +975,7 @@ const NetWorthManager = {
       if (!db) return;
       const name = document.getElementById('liab-name')?.value;
       const category = document.getElementById('liab-category')?.value;
-      const remaining_debt = document.getElementById('liab-remaining')?.value;
+      const remaining_debt = parseRawAmount(document.getElementById('liab-remaining')?.value);
       const note = document.getElementById('liab-note')?.value;
 
       db.saveLiability({ name, category, remaining_debt, note });
@@ -991,7 +991,7 @@ const NetWorthManager = {
       if (!db) return;
       const type = document.querySelector('input[name="loan-type"]:checked')?.value || 'loan';
       const person_name = document.getElementById('loan-person')?.value;
-      const original_amount = document.getElementById('loan-amount')?.value;
+      const original_amount = parseRawAmount(document.getElementById('loan-amount')?.value);
       const due_date = document.getElementById('loan-due-date')?.value;
       const note = document.getElementById('loan-note')?.value;
 
@@ -1001,13 +1001,32 @@ const NetWorthManager = {
       Toast.show('Đã lưu sổ vay mượn mới', 'success');
     });
 
+    // Repay Loan Form submit
+    document.getElementById('form-repay-loan')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const db = window.DB;
+      if (!db) return;
+      const id = document.getElementById('repay-loan-id')?.value;
+      const principal = parseRawAmount(document.getElementById('repay-principal')?.value);
+      const interest = parseRawAmount(document.getElementById('repay-interest')?.value);
+
+      if (id && principal > 0) {
+        db.recordLoanRepayment(id, { principal, interest });
+        document.getElementById('modal-repay-loan')?.setAttribute('hidden', '');
+        this.renderNetWorthView();
+        Toast.show('Đã ghi nhận thanh toán thành công', 'success');
+      } else {
+        Toast.show('Số tiền gốc thanh toán phải lớn hơn 0', 'error');
+      }
+    });
+
     // Recurring Form submit
     document.getElementById('form-add-recurring')?.addEventListener('submit', (e) => {
       e.preventDefault();
       const db = window.DB;
       if (!db) return;
       const type = document.getElementById('rec-type')?.value;
-      const amount = document.getElementById('rec-amount')?.value;
+      const amount = parseRawAmount(document.getElementById('rec-amount')?.value);
       const category = document.getElementById('rec-category')?.value;
       const day_of_month = document.getElementById('rec-day')?.value;
       const note = document.getElementById('rec-note')?.value;
@@ -1052,13 +1071,24 @@ const NetWorthManager = {
         const loans = db.getLoans();
         const target = loans.find(l => l.id === id);
         if (target) {
-          const principal = prompt(`Nhập số tiền gốc hoàn trả cho ${target.person_name} (VND):`, target.remaining_amount);
-          if (principal !== null && !isNaN(Number(principal)) && Number(principal) > 0) {
-            const interest = prompt('Nhập số tiền lãi (VND) (nếu có, không có thì nhập 0):', '0') || 0;
-            db.recordLoanRepayment(id, { principal: Number(principal), interest: Number(interest) });
-            this.renderNetWorthView();
-            Toast.show('Đã ghi nhận thanh toán thành công', 'success');
+          const idInput = document.getElementById('repay-loan-id');
+          if (idInput) idInput.value = id;
+
+          const infoEl = document.getElementById('repay-target-info');
+          if (infoEl) infoEl.innerHTML = `Thanh toán cho khoản vay <strong>${target.person_name}</strong> (Dư nợ còn lại: <strong>${db.formatVND(target.remaining_amount)}</strong>)`;
+          
+          const principalInput = document.getElementById('repay-principal');
+          if (principalInput) {
+            principalInput.value = formatVNDInput(target.remaining_amount);
+            TransactionForm.handleAmountInput(principalInput);
           }
+          const interestInput = document.getElementById('repay-interest');
+          if (interestInput) {
+            interestInput.value = '0';
+            TransactionForm.handleAmountInput(interestInput);
+          }
+
+          document.getElementById('modal-repay-loan')?.removeAttribute('hidden');
         }
       }
 

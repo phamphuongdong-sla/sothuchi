@@ -873,7 +873,11 @@
         </div>
         <div class="form-group">
           <label for="asset-value" class="form-label">Giá trị ước tính (VND) <span class="required-star">*</span></label>
-          <input type="number" id="asset-value" class="form-control" placeholder="0" required min="0">
+          <div class="input-wrapper amount-wrapper">
+            <input type="text" id="asset-value" class="form-control amount-input" placeholder="0" inputmode="numeric" required>
+            <span class="currency-suffix">₫</span>
+          </div>
+          <div id="asset-value-words" class="amount-in-words" hidden></div>
         </div>
         <div class="form-group">
           <label for="asset-note" class="form-label">Ghi chú</label>
@@ -911,7 +915,11 @@
         </div>
         <div class="form-group">
           <label for="liab-remaining" class="form-label">Dư nợ còn lại (VND) <span class="required-star">*</span></label>
-          <input type="number" id="liab-remaining" class="form-control" placeholder="0" required min="0">
+          <div class="input-wrapper amount-wrapper">
+            <input type="text" id="liab-remaining" class="form-control amount-input" placeholder="0" inputmode="numeric" required>
+            <span class="currency-suffix">₫</span>
+          </div>
+          <div id="liab-remaining-words" class="amount-in-words" hidden></div>
         </div>
         <div class="form-group">
           <label for="liab-note" class="form-label">Ghi chú</label>
@@ -953,7 +961,11 @@
         </div>
         <div class="form-group">
           <label for="loan-amount" class="form-label">Số tiền ban đầu (VND) <span class="required-star">*</span></label>
-          <input type="number" id="loan-amount" class="form-control" placeholder="0" required min="0">
+          <div class="input-wrapper amount-wrapper">
+            <input type="text" id="loan-amount" class="form-control amount-input" placeholder="0" inputmode="numeric" required>
+            <span class="currency-suffix">₫</span>
+          </div>
+          <div id="loan-amount-words" class="amount-in-words" hidden></div>
         </div>
         <div class="form-group">
           <label for="loan-due-date" class="form-label">Hạn hoàn trả</label>
@@ -966,6 +978,42 @@
         <div class="modal-footer form-actions">
           <button type="button" class="btn btn-secondary" data-close-modal="loan">Hủy</button>
           <button type="submit" id="btn-save-loan" class="btn btn-primary">Lưu Sổ Vay</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Loan Repayment -->
+  <div id="modal-repay-loan" class="modal-backdrop" hidden aria-hidden="true">
+    <div class="modal-dialog card" role="dialog" aria-labelledby="repay-loan-modal-title">
+      <div class="modal-header">
+        <h3 id="repay-loan-modal-title" class="modal-title">💸 Ghi Nhận Thanh Toán Vay</h3>
+        <button type="button" class="modal-close-btn" data-close-modal="repay" aria-label="Đóng">&times;</button>
+      </div>
+      <form id="form-repay-loan" class="modal-body transaction-form">
+        <input type="hidden" id="repay-loan-id">
+        <div class="form-group">
+          <label class="form-label" id="repay-target-info">Thanh toán cho khoản vay</label>
+        </div>
+        <div class="form-group">
+          <label for="repay-principal" class="form-label">Số tiền gốc thanh toán <span class="required-star">*</span></label>
+          <div class="input-wrapper amount-wrapper">
+            <input type="text" id="repay-principal" class="form-control amount-input" placeholder="0" inputmode="numeric" required>
+            <span class="currency-suffix">₫</span>
+          </div>
+          <div id="repay-principal-words" class="amount-in-words" hidden></div>
+        </div>
+        <div class="form-group">
+          <label for="repay-interest" class="form-label">Số tiền lãi (nếu có)</label>
+          <div class="input-wrapper amount-wrapper">
+            <input type="text" id="repay-interest" class="form-control amount-input" placeholder="0" inputmode="numeric">
+            <span class="currency-suffix">₫</span>
+          </div>
+          <div id="repay-interest-words" class="amount-in-words" hidden></div>
+        </div>
+        <div class="modal-footer form-actions">
+          <button type="button" class="btn btn-secondary" data-close-modal="repay">Hủy</button>
+          <button type="submit" class="btn btn-primary">Ghi Nhận Thanh Toán</button>
         </div>
       </form>
     </div>
@@ -991,7 +1039,11 @@
             </div>
             <div class="form-group flex-1">
               <label for="rec-amount" class="form-label-sm">Số tiền <span class="required-star">*</span></label>
-              <input type="number" id="rec-amount" class="form-control" placeholder="0" required min="0">
+              <div class="input-wrapper amount-wrapper">
+                <input type="text" id="rec-amount" class="form-control amount-input" placeholder="0" inputmode="numeric" required>
+                <span class="currency-suffix">₫</span>
+              </div>
+              <div id="rec-amount-words" class="amount-in-words" hidden></div>
             </div>
           </div>
           <div class="filter-row">
