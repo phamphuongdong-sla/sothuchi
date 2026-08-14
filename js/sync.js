@@ -183,6 +183,48 @@
         .filter(Boolean);
 
       db.saveTransactions(updated, { skipAutoPush: true });
+
+      // Synchronize Assets, Liabilities, Loans, Categories, Audit Logs to Sheets
+      try {
+        const assets = db.getAssets ? db.getAssets() : [];
+        if (assets.length > 0) {
+          await this._getFetch()(settings.gasUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'saveAssets', assets: assets })
+          }).catch(() => {});
+        }
+
+        const liabilities = db.getLiabilities ? db.getLiabilities() : [];
+        if (liabilities.length > 0) {
+          await this._getFetch()(settings.gasUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'saveLiabilities', liabilities: liabilities })
+          }).catch(() => {});
+        }
+
+        const loans = db.getLoans ? db.getLoans() : [];
+        if (loans.length > 0) {
+          await this._getFetch()(settings.gasUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'saveLoans', loans: loans })
+          }).catch(() => {});
+        }
+
+        const auditLogs = db.getAuditLogs ? db.getAuditLogs() : [];
+        if (auditLogs.length > 0) {
+          await this._getFetch()(settings.gasUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'saveAuditLogs', auditLogs: auditLogs })
+          }).catch(() => {});
+        }
+      } catch (subErr) {
+        console.warn('[SyncEngine] Extra entities push warning:', subErr);
+      }
+
       this.isSyncing = false;
       this._updateStatus('success');
 
@@ -195,7 +237,7 @@
     }
 
     /**
-     * Pull remote transactions from GAS backend and merge using LWW.
+     * Pull remote transactions, categories, assets, liabilities, loans from GAS backend and merge using LWW.
      */
     async pullSync() {
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -264,6 +306,26 @@
         if (Array.isArray(json.categories) && json.categories.length > 0) {
           const catMgr = global.CategoryManager;
           catMgr?.mergeRemoteCategories?.(json.categories);
+        }
+
+        // Merge remote assets, liabilities, loans if available
+        if (Array.isArray(json.assets) && json.assets.length > 0 && db.getAssets) {
+          const existingAssets = db.getAssets();
+          if (existingAssets.length === 0) {
+            json.assets.forEach(a => db.saveAsset(a));
+          }
+        }
+        if (Array.isArray(json.liabilities) && json.liabilities.length > 0 && db.getLiabilities) {
+          const existingLiab = db.getLiabilities();
+          if (existingLiab.length === 0) {
+            json.liabilities.forEach(l => db.saveLiability(l));
+          }
+        }
+        if (Array.isArray(json.loans) && json.loans.length > 0 && db.getLoans) {
+          const existingLoans = db.getLoans();
+          if (existingLoans.length === 0) {
+            json.loans.forEach(l => db.saveLoan(l));
+          }
         }
 
         this.isSyncing = false;

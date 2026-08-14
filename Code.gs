@@ -16,6 +16,18 @@ const HEADERS_CAT = ['ID', 'Tên Hạng Mục', 'Nhóm Chính', 'Loại', 'Icon'
 const SHEET_CFG = 'CauHinh';
 const HEADERS_CFG = ['Tên Cấu Hình', 'Giá Trị', 'Ghi Chú'];
 
+const SHEET_ASSET = 'TaiSan';
+const HEADERS_ASSET = ['ID', 'Tên Tài Sản', 'Phân Loại', 'Giá Trị', 'Ghi Chú', 'Cập Nhật'];
+
+const SHEET_LIAB = 'KhoanNo';
+const HEADERS_LIAB = ['ID', 'Tên Khoản Nợ', 'Phân Loại', 'Tổng Nợ', 'Dư Nợ Còn Lại', 'Ghi Chú', 'Cập Nhật'];
+
+const SHEET_LOAN = 'SoVay';
+const HEADERS_LOAN = ['ID', 'Loại', 'Tên Đối Tác', 'Số Tiền Ban Đầu', 'Số Tiền Còn Lại', 'Hạn Trả', 'Trạng Thái', 'Ghi Chú', 'Cập Nhật'];
+
+const SHEET_AUDIT = 'NhatKyAudit';
+const HEADERS_AUDIT = ['ID', 'Hành Động', 'Đối Tượng', 'Đối Tượng ID', 'Thời Gian', 'Chi Tiết Cũ', 'Chi Tiết Mới'];
+
 /**
  * Handle HTTP GET Requests
  */
@@ -106,7 +118,6 @@ function doGet(e) {
       const sheetCfg = getOrCreateNamedSheet(SHEET_CFG, HEADERS_CFG);
       const rowsCfg = sheetCfg.getDataRange().getValues();
       const config = {};
-
       if (rowsCfg.length > 1) {
         for (let i = 1; i < rowsCfg.length; i++) {
           const row = rowsCfg[i];
@@ -114,11 +125,47 @@ function doGet(e) {
         }
       }
 
+      // Fetch Assets from Sheet "TaiSan"
+      const sheetAsset = getOrCreateNamedSheet(SHEET_ASSET, HEADERS_ASSET);
+      const rowsAsset = sheetAsset.getDataRange().getValues();
+      const assets = [];
+      if (rowsAsset.length > 1) {
+        for (let i = 1; i < rowsAsset.length; i++) {
+          const r = rowsAsset[i];
+          if (r[0]) assets.push({ id: String(r[0]), name: String(r[1]), category: String(r[2]), value: Number(r[3]) || 0, note: String(r[4] || ''), updated_at: String(r[5] || '') });
+        }
+      }
+
+      // Fetch Liabilities from Sheet "KhoanNo"
+      const sheetLiab = getOrCreateNamedSheet(SHEET_LIAB, HEADERS_LIAB);
+      const rowsLiab = sheetLiab.getDataRange().getValues();
+      const liabilities = [];
+      if (rowsLiab.length > 1) {
+        for (let i = 1; i < rowsLiab.length; i++) {
+          const r = rowsLiab[i];
+          if (r[0]) liabilities.push({ id: String(r[0]), name: String(r[1]), category: String(r[2]), total_debt: Number(r[3]) || 0, remaining_debt: Number(r[4]) || 0, note: String(r[5] || ''), updated_at: String(r[6] || '') });
+        }
+      }
+
+      // Fetch Loans from Sheet "SoVay"
+      const sheetLoan = getOrCreateNamedSheet(SHEET_LOAN, HEADERS_LOAN);
+      const rowsLoan = sheetLoan.getDataRange().getValues();
+      const loans = [];
+      if (rowsLoan.length > 1) {
+        for (let i = 1; i < rowsLoan.length; i++) {
+          const r = rowsLoan[i];
+          if (r[0]) loans.push({ id: String(r[0]), type: String(r[1]), person_name: String(r[2]), original_amount: Number(r[3]) || 0, remaining_amount: Number(r[4]) || 0, due_date: String(r[5] || ''), status: String(r[6] || 'active'), note: String(r[7] || ''), updated_at: String(r[8] || '') });
+        }
+      }
+
       return responseJSON({
         status: 'success',
         transactions: transactions,
         categories: categories,
-        config: config
+        config: config,
+        assets: assets,
+        liabilities: liabilities,
+        loans: loans
       });
     }
 
@@ -190,6 +237,46 @@ function doPost(e) {
         sheetCfg.appendRow([k, String(cfgObj[k] || ''), 'Config item']);
       });
       return responseJSON({ status: 'success' });
+    }
+
+    if (payload.action === 'saveAssets') {
+      const sheetAsset = getOrCreateNamedSheet(SHEET_ASSET, HEADERS_ASSET);
+      sheetAsset.clearContents();
+      sheetAsset.appendRow(HEADERS_ASSET);
+      (payload.assets || []).forEach(a => {
+        sheetAsset.appendRow([a.id || '', a.name || '', a.category || '', Number(a.value) || 0, a.note || '', a.updated_at || '']);
+      });
+      return responseJSON({ status: 'success', count: (payload.assets || []).length });
+    }
+
+    if (payload.action === 'saveLiabilities') {
+      const sheetLiab = getOrCreateNamedSheet(SHEET_LIAB, HEADERS_LIAB);
+      sheetLiab.clearContents();
+      sheetLiab.appendRow(HEADERS_LIAB);
+      (payload.liabilities || []).forEach(l => {
+        sheetLiab.appendRow([l.id || '', l.name || '', l.category || '', Number(l.total_debt) || 0, Number(l.remaining_debt) || 0, l.note || '', l.updated_at || '']);
+      });
+      return responseJSON({ status: 'success', count: (payload.liabilities || []).length });
+    }
+
+    if (payload.action === 'saveLoans') {
+      const sheetLoan = getOrCreateNamedSheet(SHEET_LOAN, HEADERS_LOAN);
+      sheetLoan.clearContents();
+      sheetLoan.appendRow(HEADERS_LOAN);
+      (payload.loans || []).forEach(l => {
+        sheetLoan.appendRow([l.id || '', l.type || 'loan', l.person_name || '', Number(l.original_amount) || 0, Number(l.remaining_amount) || 0, l.due_date || '', l.status || 'active', l.note || '', l.updated_at || '']);
+      });
+      return responseJSON({ status: 'success', count: (payload.loans || []).length });
+    }
+
+    if (payload.action === 'saveAuditLogs') {
+      const sheetAudit = getOrCreateNamedSheet(SHEET_AUDIT, HEADERS_AUDIT);
+      sheetAudit.clearContents();
+      sheetAudit.appendRow(HEADERS_AUDIT);
+      (payload.auditLogs || []).forEach(l => {
+        sheetAudit.appendRow([l.id || '', l.action || '', l.entity_type || '', l.entity_id || '', l.timestamp || '', JSON.stringify(l.old_data || ''), JSON.stringify(l.new_data || '')]);
+      });
+      return responseJSON({ status: 'success', count: (payload.auditLogs || []).length });
     }
 
     return responseJSON({ status: 'error', message: 'Unsupported POST action: ' + payload.action });
