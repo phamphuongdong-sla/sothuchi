@@ -67,10 +67,22 @@ export default {
       }
 
       // 3. Batch Sync (Push & Pull)
-      if (path === '/api/syncBatch' || request.method === 'POST') {
-        const body = await request.json().catch(() => ({}));
+      if (path === '/api/syncBatch' || action === 'syncBatch' || request.method === 'POST') {
+        let body = {};
+        if (request.method === 'POST') {
+          body = await request.json().catch(() => ({}));
+        } else {
+          const payloadParam = url.searchParams.get('payload');
+          if (payloadParam) {
+            try { body = JSON.parse(decodeURIComponent(payloadParam)); } catch (_) {}
+          }
+        }
+
         const transactions = body.transactions || [];
         const categories = body.categories || [];
+        const assets = body.assets || [];
+        const liabilities = body.liabilities || [];
+        const loans = body.loans || [];
         const statements = [];
         const syncedIds = [];
 
@@ -81,7 +93,7 @@ export default {
               db.prepare('DELETE FROM transactions WHERE id = ?').bind(tx.id)
             );
             syncedIds.push(tx.id);
-          } else if (tx.sync_status === 'pending_add' || tx.sync_status === 'pending_update') {
+          } else if (tx.sync_status === 'pending_add' || tx.sync_status === 'pending_update' || tx.sync_status === 'synced') {
             statements.push(
               db.prepare(`
                 INSERT INTO transactions (id, date, type, category, amount, note, created_at, updated_at, sync_status)
@@ -131,6 +143,91 @@ export default {
                 String(cat.color || '#4f46e5'),
                 cat.is_hidden ? 1 : 0,
                 Number(cat.sort_order) || 0
+              )
+            );
+          }
+        }
+
+        // Assets Upserts
+        for (const a of assets) {
+          if (a.name) {
+            statements.push(
+              db.prepare(`
+                INSERT INTO assets (id, name, category, value, note, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                  name = excluded.name,
+                  category = excluded.category,
+                  value = excluded.value,
+                  note = excluded.note,
+                  updated_at = excluded.updated_at
+              `).bind(
+                String(a.id),
+                String(a.name),
+                String(a.category || 'Tài khoản ngân hàng'),
+                Number(a.value) || 0,
+                String(a.note || ''),
+                String(a.updated_at || new Date().toISOString())
+              )
+            );
+          }
+        }
+
+        // Liabilities Upserts
+        for (const l of liabilities) {
+          if (l.name) {
+            statements.push(
+              db.prepare(`
+                INSERT INTO liabilities (id, name, category, total_debt, remaining_debt, note, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                  name = excluded.name,
+                  category = excluded.category,
+                  total_debt = excluded.total_debt,
+                  remaining_debt = excluded.remaining_debt,
+                  note = excluded.note,
+                  updated_at = excluded.updated_at
+              `).bind(
+                String(l.id),
+                String(l.name),
+                String(l.category || 'Thẻ tín dụng'),
+                Number(l.total_debt || l.remaining_debt) || 0,
+                Number(l.remaining_debt) || 0,
+                String(l.note || ''),
+                String(l.updated_at || new Date().toISOString())
+              )
+            );
+          }
+        }
+
+        // Loans Upserts
+        for (const loan of loans) {
+          if (loan.person_name) {
+            statements.push(
+              db.prepare(`
+                INSERT INTO loans (id, type, person_name, original_amount, remaining_amount, due_date, note, status, repayments_json, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                  type = excluded.type,
+                  person_name = excluded.person_name,
+                  original_amount = excluded.original_amount,
+                  remaining_amount = excluded.remaining_amount,
+                  due_date = excluded.due_date,
+                  note = excluded.note,
+                  status = excluded.status,
+                  repayments_json = excluded.repayments_json,
+                  updated_at = excluded.updated_at
+              `).bind(
+                String(loan.id),
+                String(loan.type || 'loan'),
+                String(loan.person_name),
+                Number(loan.original_amount) || 0,
+                Number(loan.remaining_amount) || 0,
+                String(loan.due_date || ''),
+                String(loan.note || ''),
+                String(loan.status || 'active'),
+                String(typeof loan.repayments === 'string' ? loan.repayments : JSON.stringify(loan.repayments || [])),
+                String(loan.updated_at || new Date().toISOString())
               )
             );
           }
