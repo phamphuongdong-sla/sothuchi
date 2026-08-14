@@ -39,7 +39,7 @@
       </div>
       <div class="header-actions">
         <!-- Sync Status Indicator (hidden by default) -->
-        <div id="sync-status" class="sync-status status-offline" title="Trạng thái đồng bộ Google Sheets" hidden>
+        <div id="sync-status" class="sync-status status-offline" title="Trạng thái đồng bộ SQLite Cloud" hidden>
           <span class="status-dot"></span>
           <span class="status-text">Ngoại tuyến</span>
         </div>
@@ -98,303 +98,180 @@
 
     <!-- Main Views Container -->
     <main id="main-content" class="main-content app-view" role="main">
-      <!-- Section: Transactions View -->
+      <!-- Section: Quick Entry Form & Overview View -->
       <section id="view-transactions" class="view-panel active" data-view-content="transactions" data-route="transactions">
-        <div class="card form-card">
-          <div class="card-header">
-            <h3 class="card-title">📝 Ghi Chép Giao Dịch Nhanh</h3>
-            <p class="card-subtitle">Nhập khoản thu hoặc chi tiêu mới vào sổ</p>
-          </div>
-
+        <div class="card form-card mb-3">
           <form id="transaction-form" class="transaction-form" novalidate>
-            <!-- 1. Transaction Type Toggle (Income / Expense) -->
+            <div class="form-header">
+              <h3 class="form-title">➕ Ghi Chép Thu Chi Tốc Độ</h3>
+              <p class="form-subtitle">Nhập nhanh khoản thu hoặc chi tiêu hàng ngày</p>
+            </div>
+
+            <!-- Transaction Type Selector Toggle -->
             <div class="form-group">
-              <label class="form-label">Loại giao dịch</label>
+              <label class="form-label">Loại giao dịch <span class="required-star">*</span></label>
               <div class="type-toggle-container" role="radiogroup" aria-label="Loại giao dịch">
                 <input type="radio" id="type-expense" name="tx-type" value="expense" checked class="type-radio-input">
-                <label for="type-expense" class="type-toggle-btn type-btn-expense">
+                <label for="type-expense" class="type-toggle-btn type-btn-expense" role="radio" aria-checked="true">
                   <span class="type-icon">💸</span>
-                  <span>Chi tiêu</span>
+                  <span class="type-label">Chi tiêu</span>
                 </label>
 
                 <input type="radio" id="type-income" name="tx-type" value="income" class="type-radio-input">
-                <label for="type-income" class="type-toggle-btn type-btn-income">
+                <label for="type-income" class="type-toggle-btn type-btn-income" role="radio" aria-checked="false">
                   <span class="type-icon">💰</span>
-                  <span>Thu nhập</span>
+                  <span class="type-label">Thu nhập</span>
                 </label>
               </div>
             </div>
 
-            <!-- 2. Amount Input Field with Currency Formatting -->
+            <!-- Amount Input Field -->
             <div class="form-group">
-              <label for="input-amount" class="form-label">
-                Số tiền <span class="required-star">*</span>
-              </label>
+              <label for="input-amount" class="form-label">Số tiền (VND) <span class="required-star">*</span></label>
               <div class="input-wrapper amount-wrapper">
-                <input 
-                  type="text" 
-                  id="input-amount" 
-                  name="amount" 
-                  class="form-control amount-input" 
-                  placeholder="0" 
-                  inputmode="numeric" 
-                  autocomplete="off" 
-                  required
-                >
+                <input type="text" id="input-amount" name="amount" class="form-control amount-input" placeholder="0" inputmode="numeric" required aria-required="true" autocomplete="off">
                 <span class="currency-suffix">₫</span>
               </div>
-              <div id="amount-in-words" class="amount-in-words" hidden></div>
-              <span class="field-error" id="amount-error" aria-live="polite"></span>
+              <div id="amount-in-words" class="amount-in-words" hidden aria-live="polite"></div>
             </div>
 
-            <!-- 3. Dynamic Category Select Dropdown -->
+            <!-- Category Dropdown Select -->
             <div class="form-group">
-              <label for="input-category" class="form-label">
-                Hạng mục <span class="required-star">*</span>
-              </label>
-              <select id="input-category" name="category" class="form-control category-select" required>
+              <label for="input-category" class="form-label">Hạng mục <span class="required-star">*</span></label>
+              <select id="input-category" name="category" class="form-control" required aria-required="true">
                 <option value="" disabled selected>-- Chọn hạng mục --</option>
               </select>
-              <span class="field-error" id="category-error" aria-live="polite"></span>
             </div>
 
-            <!-- 4. Date Picker Input -->
+            <!-- Date Picker Field -->
             <div class="form-group">
-              <label for="input-date" class="form-label">
-                Ngày giao dịch <span class="required-star">*</span>
-              </label>
-              <input 
-                type="date" 
-                id="input-date" 
-                name="date" 
-                class="form-control" 
-                required
-              >
-              <span class="field-error" id="date-error" aria-live="polite"></span>
+              <label for="input-date" class="form-label">Ngày giao dịch <span class="required-star">*</span></label>
+              <input type="date" id="input-date" name="date" class="form-control" required aria-required="true">
             </div>
 
-            <!-- 5. Note Input Field -->
+            <!-- Note Textarea/Input -->
             <div class="form-group">
-              <label for="input-note" class="form-label">Ghi chú</label>
-              <input 
-                type="text" 
-                id="input-note" 
-                name="note" 
-                class="form-control" 
-                placeholder="Ví dụ: Ăn trưa, Cà phê, Lương tháng 8..." 
-                maxlength="200" 
-                autocomplete="off"
-              >
+              <label for="input-note" class="form-label">Ghi chú thêm</label>
+              <input type="text" id="input-note" name="note" class="form-control" placeholder="Ví dụ: Ăn trưa với đồng nghiệp, Mua sách..." autocomplete="off">
             </div>
 
             <!-- Form Action Buttons -->
             <div class="form-actions">
-              <button type="submit" id="btn-submit-tx" class="btn btn-primary btn-submit">
-                <span class="btn-icon">➕</span>
-                <span>Lưu giao dịch</span>
-              </button>
-              <button type="button" id="btn-reset-tx" class="btn btn-secondary btn-reset">
-                <span>Đặt lại</span>
+              <button type="submit" id="btn-save-transaction" class="btn btn-primary btn-lg btn-block">
+                <span>➕ Lưu Giao Dịch</span>
               </button>
             </div>
           </form>
         </div>
       </section>
 
-      <!-- Section: History & Budget View -->
+      <!-- Section: Budget / History View -->
       <section id="view-budget" class="view-panel" data-view-content="budget" data-route="budget">
-        <div class="card history-card">
-          <div class="card-header">
-            <h3 class="card-title">Lịch Sử Giao Dịch & Tìm Kiếm</h3>
-            <p class="card-subtitle">Tra cứu, lọc và quản lý lịch sử thu chi</p>
+        <div class="card history-card mb-3">
+          <div class="history-header">
+            <h3 class="card-title">📜 Lịch Sử Giao Dịch</h3>
+            <p class="card-subtitle">Tra cứu, lọc và tìm kiếm toàn bộ nhật ký thu chi</p>
           </div>
 
-          <!-- Enhanced Filter Controls -->
+          <!-- History Filter & Search Bar -->
           <div class="filter-controls">
-            <div class="form-group search-group">
-              <div class="input-wrapper search-wrapper">
-                <span class="search-icon">🔍</span>
-                <input type="text" id="search-query" class="form-control search-input" placeholder="Tìm theo ghi chú, hạng mục, số tiền...">
-                <button type="button" id="btn-clear-search" class="clear-search-btn" title="Xóa tìm kiếm" hidden>&times;</button>
+            <div class="filter-row">
+              <div class="search-input-wrapper">
+                <span class="search-icon" aria-hidden="true">🔍</span>
+                <input type="search" id="history-search" class="form-control search-control" placeholder="Tìm kiếm ghi chú, hạng mục..." aria-label="Tìm kiếm giao dịch">
               </div>
             </div>
 
-            <div class="filter-row">
-              <div class="form-group flex-1">
-                <label for="filter-type" class="form-label-sm">Loại giao dịch</label>
-                <select id="filter-type" class="form-control">
+            <div class="filter-row filter-row-multi">
+              <div class="filter-group">
+                <label for="filter-type" class="filter-label">Loại</label>
+                <select id="filter-type" class="form-control form-control-sm">
                   <option value="all">Tất cả loại</option>
-                  <option value="income">💰 Thu nhập</option>
                   <option value="expense">💸 Chi tiêu</option>
+                  <option value="income">💰 Thu nhập</option>
                 </select>
               </div>
-              <div class="form-group flex-1">
-                <label for="filter-category" class="form-label-sm">Hạng mục</label>
-                <select id="filter-category" class="form-control">
+
+              <div class="filter-group">
+                <label for="filter-category" class="filter-label">Hạng mục</label>
+                <select id="filter-category" class="form-control form-control-sm">
                   <option value="all">Tất cả hạng mục</option>
                 </select>
               </div>
-            </div>
 
-            <div class="filter-row">
-              <div class="form-group flex-1">
-                <label for="filter-date-preset" class="form-label-sm">Khoảng thời gian</label>
-                <select id="filter-date-preset" class="form-control">
-                  <option value="this_month" selected>Tháng này</option>
-                  <option value="last_month">Tháng trước</option>
-                  <option value="this_year">Năm nay</option>
-                  <option value="all">Tất cả thời gian</option>
-                  <option value="custom">Tùy chỉnh ngày</option>
-                </select>
+              <div class="filter-group">
+                <label for="filter-start-date" class="filter-label">Từ ngày</label>
+                <input type="date" id="filter-start-date" class="form-control form-control-sm">
               </div>
-            </div>
 
-            <!-- Date Range Block: Dedicated full-width row to prevent overflow -->
-            <div class="filter-row date-range-row">
-              <div class="form-group flex-1 date-range-inputs">
-                <label class="form-label-sm">Từ ngày - Đến ngày</label>
-                <div class="date-input-group">
-                  <input type="date" id="filter-start-date" class="form-control" title="Từ ngày">
-                  <span class="date-sep">-</span>
-                  <input type="date" id="filter-end-date" class="form-control" title="Đến ngày">
-                </div>
+              <div class="filter-group">
+                <label for="filter-end-date" class="filter-label">Đến ngày</label>
+                <input type="date" id="filter-end-date" class="form-control form-control-sm">
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- History List Container -->
-          <div id="history-list-container" class="history-list-container"></div>
-
-          <!-- Pagination / Load More Container -->
-          <div id="history-pagination-container" class="pagination-container">
-            <button type="button" id="btn-load-more" class="btn btn-secondary btn-load-more" hidden>
-              <span>Xem thêm</span>
-              <span id="load-more-count" class="badge-count"></span>
-            </button>
-          </div>
+        <!-- History Transactions List Container -->
+        <div id="history-list-container" class="history-list-container">
+          <!-- Dynamic transaction list rendered by history.js -->
         </div>
       </section>
 
-      <!-- Section: Reports & Charts View -->
+      <!-- Section: Reports & Statistics View -->
       <section id="view-reports" class="view-panel" data-view-content="reports" data-route="reports">
-        <!-- 1. Export & Action Tools Bar -->
-        <div class="card reports-filter-card">
-          <div class="reports-header-tools mb-3">
+        <div class="card reports-filter-card mb-3">
+          <div class="reports-header-tools">
             <div class="reports-header-title">
-              <h3 class="card-title">📊 Báo Cáo Tài Chính Chuyên Nghiệp</h3>
-              <p class="card-subtitle">Phân tích dòng tiền, sức khỏe tài chính & quản trị ngân sách</p>
+              <h3 class="card-title">📈 Báo Cáo Phân Tích Tài Chính</h3>
+              <p class="card-subtitle">Thống kê cơ cấu thu chi, tài sản ròng và quy tắc 50/30/20</p>
             </div>
-            <div class="reports-export-actions">
-              <button type="button" id="btn-export-csv" class="btn btn-secondary btn-sm">
-                <span>📥 Xuất Excel/CSV</span>
-              </button>
-              <button type="button" id="btn-print-pdf" class="btn btn-primary btn-sm">
-                <span>🖨️ In / Xuất PDF</span>
-              </button>
-            </div>
-          </div>
 
-          <div class="reports-filter-bar">
-            <div class="form-group filter-group flex-1">
-              <label for="chart-date-range" class="form-label">Khoảng thời gian báo cáo</label>
-              <select id="chart-date-range" class="form-control">
-                <option value="all_time" selected>Tất cả thời gian</option>
-                <option value="this_month">Tháng này</option>
-                <option value="last_month">Tháng trước</option>
-                <option value="this_year">Năm nay</option>
-                <option value="custom">Tùy chỉnh ngày...</option>
-              </select>
-            </div>
-            <div id="chart-custom-date-container" class="custom-date-inputs hidden flex-1">
-              <div class="form-group">
-                <label for="chart-start-date" class="form-label">Từ ngày</label>
-                <input type="date" id="chart-start-date" class="form-control">
-              </div>
-              <div class="form-group">
-                <label for="chart-end-date" class="form-label">Đến ngày</label>
-                <input type="date" id="chart-end-date" class="form-control">
-              </div>
+            <!-- Reports Month / Year Selector -->
+            <div class="reports-month-selector">
+              <button type="button" id="btn-prev-month" class="icon-btn btn-sm" aria-label="Tháng trước">◀</button>
+              <span id="reports-month-label" class="reports-month-text">Tháng 08/2026</span>
+              <button type="button" id="btn-next-month" class="icon-btn btn-sm" aria-label="Tháng sau">▶</button>
             </div>
           </div>
         </div>
 
-        <!-- 2. Smart Executive Summary (Đánh giá tài chính tự động) -->
-        <div class="card smart-summary-card mb-3">
-          <div class="smart-summary-header">
-            <span class="smart-summary-badge">💡 Nhận Xét Quản Trị</span>
-            <span id="financial-health-badge" class="health-score-badge">Đang đánh giá...</span>
-          </div>
-          <div id="smart-executive-summary-text" class="smart-summary-body">
-            Đang phân tích dữ liệu tài chính của bạn...
-          </div>
-        </div>
-
-        <!-- 3. Financial Health Indicator Summary Cards (6 KPI Cards Grid) -->
-        <div class="reports-summary-cards">
+        <!-- KPI Summary Cards Grid -->
+        <div class="reports-summary-cards mb-3">
           <div class="summary-card card-income">
             <div class="card-icon">💰</div>
             <div class="card-info">
-              <span class="summary-label">Tổng Thu</span>
-              <span id="total-income" class="summary-value income-text">0 ₫</span>
-              <span id="income-mom" class="mom-badge">--</span>
+              <span class="summary-label">Tổng Thu Nhập</span>
+              <span id="report-total-income" class="summary-value income-text">0 ₫</span>
             </div>
           </div>
+
           <div class="summary-card card-expense">
             <div class="card-icon">💸</div>
             <div class="card-info">
-              <span class="summary-label">Tổng Chi</span>
-              <span id="total-expense" class="summary-value expense-text">0 ₫</span>
-              <span id="expense-mom" class="mom-badge">--</span>
+              <span class="summary-label">Tổng Chi Tiêu</span>
+              <span id="report-total-expense" class="summary-value expense-text">0 ₫</span>
             </div>
           </div>
+
           <div class="summary-card card-balance">
-            <div class="card-icon">⚖️</div>
+            <div class="card-icon">💎</div>
             <div class="card-info">
-              <span class="summary-label">Số Dư Ròng</span>
-              <span id="net-balance" class="summary-value">0 ₫</span>
-              <span id="balance-mom" class="mom-badge">--</span>
+              <span class="summary-label">Thặng Dư Ròng</span>
+              <span id="report-net-balance" class="summary-value">0 ₫</span>
             </div>
           </div>
+
           <div class="summary-card card-savings">
             <div class="card-icon">🎯</div>
             <div class="card-info">
               <span class="summary-label">Tỷ Lệ Tiết Kiệm</span>
-              <span id="savings-rate" class="summary-value">0.0%</span>
-              <span id="savings-mom" class="mom-badge">--</span>
-            </div>
-          </div>
-          <div class="summary-card card-forecast">
-            <div class="card-icon">📈</div>
-            <div class="card-info">
-              <span class="summary-label">Dự Báo Cuối Tháng</span>
-              <span id="monthly-forecast" class="summary-value">0 ₫</span>
-              <span id="daily-burnrate" class="sub-value">Tốc độ tiêu dùng: 0 ₫/ngày</span>
-            </div>
-          </div>
-          <div class="summary-card card-emergency">
-            <div class="card-icon">🛡️</div>
-            <div class="card-info">
-              <span class="summary-label">Quỹ Dự Phòng</span>
-              <span id="emergency-fund-months" class="summary-value">0.0 tháng</span>
-              <span id="emergency-status" class="sub-value">Số dư duy trì cuộc sống</span>
+              <span id="report-savings-rate" class="summary-value">0%</span>
             </div>
           </div>
         </div>
 
-        <!-- 4. Cash Flow & Trend Analysis Chart (Full Width Chart) -->
-        <div class="card chart-card mb-3">
-          <div class="chart-card-header">
-            <div>
-              <h4 class="chart-title">📈 Biểu Đồ Dòng Tiền & Xu Hướng Tích Lũy</h4>
-              <p class="chart-subtitle">Biến thiên Thu nhập, Chi tiêu và Tích lũy số dư ròng theo thời gian</p>
-            </div>
-          </div>
-          <div class="chart-wrapper chart-wrapper--lg">
-            <canvas id="trend-chart"></canvas>
-          </div>
-        </div>
-
-        <!-- 5. Visual Charts Grid (Category Breakdown & Income vs Expense) -->
+        <!-- Chart.js Visualizations Grid -->
         <div class="charts-container mb-3">
           <div class="card chart-card">
             <div class="chart-card-header">
@@ -421,7 +298,7 @@
           </div>
         </div>
 
-        <!-- 6. Financial Health Allocation (50/30/20 Rule) & Pareto Outliers -->
+        <!-- Financial Health Allocation (50/30/20 Rule) & Pareto Outliers -->
         <div class="charts-container">
           <div class="card chart-card">
             <div class="chart-card-header">
@@ -516,7 +393,7 @@
           <div class="chart-card-header card-header--spaced">
             <div>
               <h4 class="chart-title">🤝 Sổ Vay & Cho Vay (Debts & Loans Tracker)</h4>
-              <p class="chart-subtitle">Theo dõi tiền cho vay (Khoản phải thu) và tiền đi vay (Khoản phải trả)</p>
+              <p class="card-subtitle">Theo dõi tiền cho vay (Khoản phải thu) và tiền đi vay (Khoản phải trả)</p>
             </div>
             <button type="button" id="btn-open-add-loan" class="btn btn-primary btn-sm">➕ Thêm Khoản Vay/Cho Vay</button>
           </div>
@@ -530,8 +407,8 @@
       <section id="view-settings" class="view-panel" data-view-content="settings" data-route="settings">
         <div class="card settings-card">
           <div class="card-header">
-            <h3 class="card-title">🟢 Trạng Thái Đồng Bộ Google Sheets</h3>
-            <p class="card-subtitle">Ứng dụng đã tự động kết nối 2 chiều với Google Sheets cá nhân của bạn</p>
+            <h3 class="card-title">🟢 Trạng Thái Đồng Bộ SQLite Cloud</h3>
+            <p class="card-subtitle">Ứng dụng đã tự động kết nối 2 chiều với cơ sở dữ liệu SQLite Cloud D1</p>
           </div>
           <div class="auto-sync-status-box">
             <span class="auto-sync-icon">⚡</span>
