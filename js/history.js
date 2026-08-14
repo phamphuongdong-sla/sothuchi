@@ -11,10 +11,19 @@
      Helpers
      ------------------------------------------------------------------ */
   function getDB() {
+    if (typeof globalThis !== 'undefined' && globalThis.DB) return globalThis.DB;
+    if (typeof window !== 'undefined' && window.DB) return window.DB;
+    if (typeof global !== 'undefined' && global.DB) return global.DB;
     return global.DB || (global.window && global.window.DB);
   }
 
   function getCatMgr() {
+    if (typeof globalThis !== 'undefined' && (globalThis.CategoryManager || globalThis.Categories)) {
+      return globalThis.CategoryManager || globalThis.Categories;
+    }
+    if (typeof window !== 'undefined' && (window.CategoryManager || window.Categories)) {
+      return window.CategoryManager || window.Categories;
+    }
     return global.CategoryManager || global.Categories ||
       (global.window && (global.window.CategoryManager || global.window.Categories));
   }
@@ -86,16 +95,27 @@
 
       const f = { ...this.currentFilters, ...overrides };
       const query = (f.query || '').trim().toLowerCase();
-      const { category, type, wallet, startDate, endDate } = f;
+      const { category, type, wallet, wallet_id, wallet_name, startDate, endDate } = f;
 
       // Inverted date range → empty
       if (startDate && endDate && startDate > endDate) return [];
+
+      const targetWallet = wallet_id && wallet_id !== 'all' ? wallet_id : (wallet && wallet !== 'all' ? wallet : null);
 
       return txs.filter(tx => {
         if (startDate && tx.date < startDate) return false;
         if (endDate && tx.date > endDate) return false;
         if (type && type !== 'all' && tx.type !== type) return false;
-        if (wallet && wallet !== 'all' && (tx.wallet_id || 'wallet_cash') !== wallet) return false;
+        if (targetWallet && targetWallet !== 'all') {
+          const txWalletId = tx.wallet_id || 'wallet_cash';
+          const txWalletName = tx.wallet_name || 'Ví tiền mặt';
+          if (txWalletId !== targetWallet && txWalletName !== targetWallet) return false;
+        }
+        if (wallet_name && wallet_name !== 'all') {
+          const txWalletName = tx.wallet_name || 'Ví tiền mặt';
+          const txWalletId = tx.wallet_id || 'wallet_cash';
+          if (txWalletName !== wallet_name && txWalletId !== wallet_name) return false;
+        }
 
         // Category filter: match subcategory name or group name
         if (category && category !== 'all') {
@@ -109,10 +129,12 @@
           if (!matchesCat && !matchesGroup) return false;
         }
 
-        // Keyword search: note, category, group, amount (raw & formatted), date
+        // Keyword search: note, category, group, amount (raw & formatted), date, wallet_name
         if (query) {
           const noteText = (tx.note || '').toLowerCase();
           const catText = (tx.category || '').toLowerCase();
+          const walletText = (tx.wallet_name || '').toLowerCase();
+          const walletIdText = (tx.wallet_id || '').toLowerCase();
           const amountRaw = String(tx.amount || '');
           // also match formatted VND like "50.000"
           const amountFmt = formatVND(tx.amount).replace(/[^\d.]/g, '').toLowerCase();
@@ -128,6 +150,8 @@
           const matched =
             noteText.includes(query) ||
             catText.includes(query) ||
+            walletText.includes(query) ||
+            walletIdText.includes(query) ||
             groupText.includes(query) ||
             amountRaw.includes(query.replace(/\./g, '')) ||
             amountFmt.includes(query) ||
@@ -689,4 +713,4 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = manager;
   }
-})(typeof window !== 'undefined' ? window : this);
+})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));

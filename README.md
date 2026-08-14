@@ -53,6 +53,19 @@ Trực tiếp trong giao diện ứng dụng (Tab Cài đặt):
 
 ---
 
+## 🔒 Phân Quyền Access & Bảo Mật Dữ Liệu
+Hệ thống sử dụng cơ chế REST API mã hóa HTTPS qua Cloudflare Workers và phân quyền truy cập an toàn. Người dùng có quyền truy cập (Permission / Access) riêng biệt và dữ liệu được bảo vệ an toàn.
+
+---
+
+## ❓ Câu Hỏi Thường Gặp (FAQ & Troubleshooting)
+- **Q: Ứng dụng có chạy offline được không?**  
+  A: Có, PWA tự động lưu trữ dữ liệu offline bằng LocalStorage và Service Worker. Khi có mạng trở lại, ứng dụng tự động đồng bộ lên Cloudflare D1.
+- **Q: Làm sao để chuyển dữ liệu sang điện thoại mới?**  
+  A: Bạn chỉ cần đăng nhập hoặc nhập URL Cloudflare Worker trong tab Cài đặt, hệ thống sẽ tự động tải lại toàn bộ danh sách ví, thu chi, tài sản từ Cloud D1.
+
+---
+
 ## 📄 Cấu Trúc Dự Án
 ```json
 {

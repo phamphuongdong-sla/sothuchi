@@ -10,6 +10,15 @@ const CORS_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8'
 };
 
+export async function executeBatchSafe(db, statements, chunkSize = 80) {
+  for (let i = 0; i < statements.length; i += chunkSize) {
+    const chunk = statements.slice(i, i + chunkSize);
+    if (chunk.length > 0) {
+      await db.batch(chunk);
+    }
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     if (request.method === 'OPTIONS') {
@@ -86,17 +95,19 @@ export default {
         const assets = body.assets || [];
         const liabilities = body.liabilities || [];
         const loans = body.loans || [];
+        const recurring = body.recurring || [];
+        const auditLogs = body.audit_logs || body.auditLogs || [];
         const statements = [];
         const syncedIds = [];
 
         // Transaction Upserts & Deletes
         for (const tx of transactions) {
-          if (tx.sync_status === 'pending_delete') {
+          if (tx.sync_status === 'pending_delete' || tx.is_deleted || tx.action === 'delete') {
             statements.push(
               db.prepare('DELETE FROM transactions WHERE id = ?').bind(tx.id)
             );
             syncedIds.push(tx.id);
-          } else if (tx.sync_status === 'pending_add' || tx.sync_status === 'pending_update' || tx.sync_status === 'synced') {
+          } else if (tx.sync_status === 'pending_add' || tx.sync_status === 'pending_update' || tx.sync_status === 'synced' || tx.id) {
             statements.push(
               db.prepare(`
                 INSERT INTO transactions (id, date, type, category, amount, note, wallet_id, wallet_name, created_at, updated_at, sync_status)
@@ -128,9 +139,14 @@ export default {
           }
         }
 
-        // Wallets Upserts
+        // Wallets Upserts & Deletes
         for (const w of wallets) {
-          if (w.name) {
+          if (w.sync_status === 'pending_delete' || w.is_deleted || w.action === 'delete') {
+            statements.push(
+              db.prepare('DELETE FROM wallets WHERE id = ?').bind(w.id)
+            );
+            syncedIds.push(w.id);
+          } else if (w.name) {
             statements.push(
               db.prepare(`
                 INSERT INTO wallets (id, name, type, icon, color, initial_balance, balance, is_default, is_hidden)
@@ -150,27 +166,35 @@ export default {
                 String(w.type || 'cash'),
                 String(w.icon || '💵'),
                 String(w.color || '#10b981'),
-                Number(w.initial_balance || w.balance) || 0,
+                Number(w.initial_balance !== undefined ? w.initial_balance : w.balance) || 0,
                 Number(w.balance) || 0,
                 w.is_default ? 1 : 0,
                 w.is_hidden ? 1 : 0
               )
             );
+            syncedIds.push(w.id);
           }
         }
 
-        // Category Upserts
+        // Category Upserts & Deletes
         for (const cat of categories) {
-          if (cat.name) {
+          if (cat.sync_status === 'pending_delete' || cat.is_deleted || cat.action === 'delete') {
+            statements.push(
+              db.prepare('DELETE FROM categories WHERE id = ?').bind(cat.id)
+            );
+            syncedIds.push(cat.id);
+          } else if (cat.name) {
             statements.push(
               db.prepare(`
-                INSERT INTO categories (id, name, type, icon, color, is_hidden, sort_order)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO categories (id, name, type, icon, color, group_name, group_id, is_hidden, sort_order)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                   name = excluded.name,
                   type = excluded.type,
                   icon = excluded.icon,
                   color = excluded.color,
+                  group_name = excluded.group_name,
+                  group_id = excluded.group_id,
                   is_hidden = excluded.is_hidden,
                   sort_order = excluded.sort_order
               `).bind(
@@ -179,16 +203,24 @@ export default {
                 String(cat.type || 'expense'),
                 String(cat.icon || '📁'),
                 String(cat.color || '#4f46e5'),
+                String(cat.group_name || cat.group || ''),
+                String(cat.group_id || cat.groupId || ''),
                 cat.is_hidden ? 1 : 0,
                 Number(cat.sort_order) || 0
               )
             );
+            syncedIds.push(cat.id);
           }
         }
 
-        // Assets Upserts
+        // Assets Upserts & Deletes
         for (const a of assets) {
-          if (a.name) {
+          if (a.sync_status === 'pending_delete' || a.is_deleted || a.action === 'delete') {
+            statements.push(
+              db.prepare('DELETE FROM assets WHERE id = ?').bind(a.id)
+            );
+            syncedIds.push(a.id);
+          } else if (a.name) {
             statements.push(
               db.prepare(`
                 INSERT INTO assets (id, name, category, value, note, updated_at)
@@ -208,12 +240,18 @@ export default {
                 String(a.updated_at || new Date().toISOString())
               )
             );
+            syncedIds.push(a.id);
           }
         }
 
-        // Liabilities Upserts
+        // Liabilities Upserts & Deletes
         for (const l of liabilities) {
-          if (l.name) {
+          if (l.sync_status === 'pending_delete' || l.is_deleted || l.action === 'delete') {
+            statements.push(
+              db.prepare('DELETE FROM liabilities WHERE id = ?').bind(l.id)
+            );
+            syncedIds.push(l.id);
+          } else if (l.name) {
             statements.push(
               db.prepare(`
                 INSERT INTO liabilities (id, name, category, total_debt, remaining_debt, note, updated_at)
@@ -229,18 +267,24 @@ export default {
                 String(l.id),
                 String(l.name),
                 String(l.category || 'Thẻ tín dụng'),
-                Number(l.total_debt || l.remaining_debt) || 0,
+                Number(l.total_debt !== undefined ? l.total_debt : l.remaining_debt) || 0,
                 Number(l.remaining_debt) || 0,
                 String(l.note || ''),
                 String(l.updated_at || new Date().toISOString())
               )
             );
+            syncedIds.push(l.id);
           }
         }
 
-        // Loans Upserts
+        // Loans Upserts & Deletes
         for (const loan of loans) {
-          if (loan.person_name) {
+          if (loan.sync_status === 'pending_delete' || loan.is_deleted || loan.action === 'delete') {
+            statements.push(
+              db.prepare('DELETE FROM loans WHERE id = ?').bind(loan.id)
+            );
+            syncedIds.push(loan.id);
+          } else if (loan.person_name) {
             statements.push(
               db.prepare(`
                 INSERT INTO loans (id, type, person_name, original_amount, remaining_amount, due_date, note, status, repayments_json, updated_at)
@@ -268,11 +312,73 @@ export default {
                 String(loan.updated_at || new Date().toISOString())
               )
             );
+            syncedIds.push(loan.id);
+          }
+        }
+
+        // Recurring Upserts & Deletes
+        for (const r of recurring) {
+          if (r.sync_status === 'pending_delete' || r.is_deleted || r.action === 'delete') {
+            statements.push(
+              db.prepare('DELETE FROM recurring WHERE id = ?').bind(r.id)
+            );
+            syncedIds.push(r.id);
+          } else if (r.category || r.type || r.id) {
+            statements.push(
+              db.prepare(`
+                INSERT INTO recurring (id, type, amount, category, wallet_id, note, frequency, day_of_month, last_run_date, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                  type = excluded.type,
+                  amount = excluded.amount,
+                  category = excluded.category,
+                  wallet_id = excluded.wallet_id,
+                  note = excluded.note,
+                  frequency = excluded.frequency,
+                  day_of_month = excluded.day_of_month,
+                  last_run_date = excluded.last_run_date,
+                  is_active = excluded.is_active
+              `).bind(
+                String(r.id || 'rec_' + Date.now()),
+                String(r.type || 'expense'),
+                Number(r.amount) || 0,
+                String(r.category || ''),
+                String(r.wallet_id || 'wallet_cash'),
+                String(r.note || ''),
+                String(r.frequency || 'monthly'),
+                Number(r.day_of_month) || 1,
+                String(r.last_run_date || ''),
+                r.is_active !== undefined ? (r.is_active ? 1 : 0) : 1
+              )
+            );
+            syncedIds.push(r.id);
+          }
+        }
+
+        // Audit Logs Inserts
+        for (const log of auditLogs) {
+          if (log.id && log.action) {
+            statements.push(
+              db.prepare(`
+                INSERT INTO audit_logs (id, timestamp, action, entity_type, entity_id, old_data_json, new_data_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO NOTHING
+              `).bind(
+                String(log.id),
+                String(log.timestamp || new Date().toISOString()),
+                String(log.action),
+                String(log.entity_type || log.entityType || 'transaction'),
+                String(log.entity_id || log.entityId || ''),
+                typeof log.old_data_json === 'string' ? log.old_data_json : (log.old_data_json ? JSON.stringify(log.old_data_json) : (log.oldData ? JSON.stringify(log.oldData) : null)),
+                typeof log.new_data_json === 'string' ? log.new_data_json : (log.new_data_json ? JSON.stringify(log.new_data_json) : (log.newData ? JSON.stringify(log.newData) : null))
+              )
+            );
+            syncedIds.push(log.id);
           }
         }
 
         if (statements.length > 0) {
-          await db.batch(statements);
+          await executeBatchSafe(db, statements, 80);
         }
 
         // Fetch remote updates
@@ -280,6 +386,8 @@ export default {
 
         return jsonResponse({
           status: 'success',
+          success: true,
+          synced_count: syncedIds.length,
           synced_ids: syncedIds,
           remote_updates: allRemote.results || []
         });

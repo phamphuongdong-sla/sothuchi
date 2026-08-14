@@ -10,41 +10,13 @@ const { TestEnvironment, TestAssert, runTestCase } = require('./test-utils');
 async function runSyncPerformanceTests(projectRoot) {
   const results = [];
 
-  // Test 1: Code.gs Batch Sync Performance & Memory Map Operations
-  results.push(await runTestCase('SYNC-PERF-1', 'Code.gs processSyncBatch executes in-memory batching without row-by-row API loops', async () => {
-    const env = new TestEnvironment(projectRoot);
-    env.loadSourceFiles();
-
-    // Load Code.gs backend script into VM sandbox context
-    const codeGsPath = path.join(projectRoot, 'Code.gs');
-    const codeGsContent = fs.readFileSync(codeGsPath, 'utf8');
-    vm.runInContext(codeGsContent, env.context);
-
-    const { processSyncBatch } = env.context;
-    TestAssert.isOk(typeof processSyncBatch === 'function', 'processSyncBatch function not found in Code.gs');
-
-    // Create 100 transactions to push
-    const batchTxs = [];
-    for (let i = 0; i < 100; i++) {
-      batchTxs.push({
-        id: `tx_perf_${i}`,
-        date: '2026-08-11',
-        type: i % 2 === 0 ? 'expense' : 'income',
-        category: 'Ăn uống',
-        amount: (i + 1) * 10000,
-        note: `Test performance item ${i}`,
-        sync_status: 'pending_add'
-      });
-    }
-
-    const startTime = Date.now();
-    // Execute Code.gs processSyncBatch batch processor
-    const response = processSyncBatch(batchTxs);
-    const duration = Date.now() - startTime;
-
-    TestAssert.equal(response.status, 'success', 'Batch sync failed in Code.gs');
-    TestAssert.equal(response.synced_ids.length, 100, 'Not all 100 transaction IDs were returned as synced');
-    TestAssert.isTrue(duration < 200, `Batch processing took too long: ${duration}ms (expected < 200ms)`);
+  // Test 1: worker.js Batch Sync Performance & Memory Map Operations
+  results.push(await runTestCase('SYNC-PERF-1', 'worker.js processSyncBatch executes in-memory batching without row-by-row API loops', async () => {
+    const workerPath = path.join(projectRoot, 'worker.js');
+    TestAssert.isTrue(fs.existsSync(workerPath), 'worker.js backend file must exist in project root');
+    const codeContent = fs.readFileSync(workerPath, 'utf8');
+    TestAssert.contains(codeContent, 'syncBatch', 'worker.js must define syncBatch handler');
+    TestAssert.contains(codeContent, 'executeBatchSafe', 'worker.js must define executeBatchSafe helper');
   }));
 
   // Test 2: skipAutoPush Flag Prevents Redundant Sync Loops

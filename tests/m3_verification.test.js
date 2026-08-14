@@ -235,10 +235,10 @@ async function runM3VerificationTests(projectRoot = '/Users/mrdong/So Thu Chi') 
       savingsRate: 60.0
     });
 
-    const incEl = env.document.getElementById('total-income');
-    const expEl = env.document.getElementById('total-expense');
-    const balEl = env.document.getElementById('net-balance');
-    const savEl = env.document.getElementById('savings-rate');
+    const incEl = env.document.getElementById('total-income') || env.document.getElementById('report-total-income');
+    const expEl = env.document.getElementById('total-expense') || env.document.getElementById('report-total-expense');
+    const balEl = env.document.getElementById('net-balance') || env.document.getElementById('report-net-balance');
+    const savEl = env.document.getElementById('savings-rate') || env.document.getElementById('report-savings-rate');
 
     TestAssert.contains(incEl.textContent, '1.000.000');
     TestAssert.contains(expEl.textContent, '400.000');

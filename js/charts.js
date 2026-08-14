@@ -38,10 +38,11 @@
 
       transactions.forEach(tx => {
         if (tx.sync_status === 'pending_delete') return;
+        if (tx.type === 'transfer' || tx.category === 'Chuyển tiền nội bộ' || tx.is_transfer) return;
         const amount = Number(tx.amount) || 0;
         if (tx.type === 'income') {
           totalIncome += amount;
-        } else {
+        } else if (tx.type === 'expense') {
           totalExpense += amount;
         }
       });
@@ -171,7 +172,7 @@
       // Calculate average monthly expense across history
       let avgMonthlyExpense = currentSummary.totalExpense;
       if (allTxs.length > 0) {
-        const activeTxs = allTxs.filter(t => t.sync_status !== 'pending_delete' && t.type === 'expense');
+        const activeTxs = allTxs.filter(t => t.sync_status !== 'pending_delete' && t.type === 'expense' && t.category !== 'Chuyển tiền nội bộ' && !t.is_transfer);
         const monthsMap = {};
         activeTxs.forEach(t => {
           const ym = t.date ? t.date.substring(0, 7) : 'other';
@@ -182,8 +183,17 @@
         avgMonthlyExpense = grandExpense / monthCount;
       }
 
+      let totalLiquidAssets = 0;
+      const db = (typeof globalThis !== 'undefined' && globalThis.DB) || (typeof window !== 'undefined' && window.DB) || (typeof global !== 'undefined' && global.DB) || global.DB;
+      if (db && typeof db.getWallets === 'function') {
+        const wallets = db.getWallets(false);
+        totalLiquidAssets = (wallets || []).reduce((sum, w) => sum + (Number(w.balance) || 0), 0);
+      } else {
+        totalLiquidAssets = Math.max(0, currentSummary.netBalance || 0);
+      }
+
       const emergencyFundMonths = avgMonthlyExpense > 0 
-        ? Number((currentSummary.netBalance / avgMonthlyExpense).toFixed(1)) 
+        ? Number((Math.max(0, totalLiquidAssets) / avgMonthlyExpense).toFixed(1)) 
         : 0;
 
       return {
@@ -320,54 +330,55 @@
       const db = global.DB || (global.window && global.window.DB);
       const formatVND = (db && db.formatVND) || global.formatVND || (n => Number(n).toLocaleString('vi-VN') + ' ₫');
 
-      const incEl = document.getElementById('total-income');
-      const expEl = document.getElementById('total-expense');
-      const balEl = document.getElementById('net-balance');
-      const savEl = document.getElementById('savings-rate');
+      const doc = (typeof window !== 'undefined' && window.document) || (typeof globalThis !== 'undefined' && globalThis.document) || (typeof document !== 'undefined' ? document : null) || (global && global.document);
+      const incEls = doc ? [doc.getElementById('total-income'), doc.getElementById('report-total-income')].filter(Boolean) : [];
+      const expEls = doc ? [doc.getElementById('total-expense'), doc.getElementById('report-total-expense')].filter(Boolean) : [];
+      const balEls = doc ? [doc.getElementById('net-balance'), doc.getElementById('report-net-balance')].filter(Boolean) : [];
+      const savEls = doc ? [doc.getElementById('savings-rate'), doc.getElementById('report-savings-rate')].filter(Boolean) : [];
 
-      if (incEl) incEl.textContent = formatVND(summary.totalIncome);
-      if (expEl) expEl.textContent = formatVND(summary.totalExpense);
+      incEls.forEach(el => el.textContent = formatVND(summary.totalIncome));
+      expEls.forEach(el => el.textContent = formatVND(summary.totalExpense));
 
-      if (balEl) {
-        balEl.textContent = formatVND(summary.netBalance);
+      balEls.forEach(el => {
+        el.textContent = formatVND(summary.netBalance);
         if (summary.netBalance < 0) {
-          balEl.classList.add('negative-balance');
-          balEl.classList.remove('positive-balance');
+          el.classList.add('negative-balance');
+          el.classList.remove('positive-balance');
         } else {
-          balEl.classList.add('positive-balance');
-          balEl.classList.remove('negative-balance');
+          el.classList.add('positive-balance');
+          el.classList.remove('negative-balance');
         }
-      }
+      });
 
-      if (savEl) {
-        savEl.textContent = `${summary.savingsRate}%`;
+      savEls.forEach(el => {
+        el.textContent = `${summary.savingsRate}%`;
         if (summary.savingsRate < 0) {
-          savEl.classList.add('negative-savings');
-          savEl.classList.remove('positive-savings');
+          el.classList.add('negative-savings');
+          el.classList.remove('positive-savings');
         } else {
-          savEl.classList.add('positive-savings');
-          savEl.classList.remove('negative-savings');
+          el.classList.add('positive-savings');
+          el.classList.remove('negative-savings');
         }
-      }
+      });
 
       // MoM Badges
       if (mom) {
-        const incMomEl = document.getElementById('income-mom');
-        const expMomEl = document.getElementById('expense-mom');
-        const balMomEl = document.getElementById('balance-mom');
+        const incMomEls = [document.getElementById('income-mom'), document.getElementById('report-income-mom')].filter(Boolean);
+        const expMomEls = [document.getElementById('expense-mom'), document.getElementById('report-expense-mom')].filter(Boolean);
+        const balMomEls = [document.getElementById('balance-mom'), document.getElementById('report-balance-mom')].filter(Boolean);
 
-        if (incMomEl) {
-          incMomEl.textContent = `${mom.incomeIsUp ? '▲' : '▼'} ${mom.incomeDiff} so với kỳ trước`;
-          incMomEl.className = `mom-badge ${mom.incomeIsUp ? 'mom-positive' : 'mom-negative'}`;
-        }
-        if (expMomEl) {
-          expMomEl.textContent = `${mom.expenseIsUp ? '▲' : '▼'} ${mom.expenseDiff} so với kỳ trước`;
-          expMomEl.className = `mom-badge ${mom.expenseIsUp ? 'mom-negative' : 'mom-positive'}`;
-        }
-        if (balMomEl) {
-          balMomEl.textContent = `${mom.balanceIsUp ? '▲' : '▼'} ${mom.balanceDiff} so với kỳ trước`;
-          balMomEl.className = `mom-badge ${mom.balanceIsUp ? 'mom-positive' : 'mom-negative'}`;
-        }
+        incMomEls.forEach(el => {
+          el.textContent = `${mom.incomeIsUp ? '▲' : '▼'} ${mom.incomeDiff} so với kỳ trước`;
+          el.className = `mom-badge ${mom.incomeIsUp ? 'mom-positive' : 'mom-negative'}`;
+        });
+        expMomEls.forEach(el => {
+          el.textContent = `${mom.expenseIsUp ? '▲' : '▼'} ${mom.expenseDiff} so với kỳ trước`;
+          el.className = `mom-badge ${mom.expenseIsUp ? 'mom-negative' : 'mom-positive'}`;
+        });
+        balMomEls.forEach(el => {
+          el.textContent = `${mom.balanceIsUp ? '▲' : '▼'} ${mom.balanceDiff} so với kỳ trước`;
+          el.className = `mom-badge ${mom.balanceIsUp ? 'mom-positive' : 'mom-negative'}`;
+        });
       }
 
       // Forecast & Emergency Cards
@@ -959,4 +970,4 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = manager;
   }
-})(typeof window !== 'undefined' ? window : this);
+})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));

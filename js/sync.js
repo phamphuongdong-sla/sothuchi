@@ -136,9 +136,10 @@
       const assets = db.getAssets ? db.getAssets() : [];
       const liabilities = db.getLiabilities ? db.getLiabilities() : [];
       const loans = db.getLoans ? db.getLoans() : [];
+      const recurring = db.getRecurring ? db.getRecurring() : [];
       const auditLogs = db.getAuditLogs ? db.getAuditLogs() : [];
 
-      if (!deduped.length && !wallets.length && !assets.length && !liabilities.length && !loans.length && !auditLogs.length) {
+      if (!deduped.length && !wallets.length && !assets.length && !liabilities.length && !loans.length && !recurring.length && !auditLogs.length) {
         this._updateStatus('success');
         return { success: true, syncedCount: 0 };
       }
@@ -153,7 +154,9 @@
         assets: assets,
         liabilities: liabilities,
         loans: loans,
-        auditLogs: auditLogs
+        recurring: recurring,
+        auditLogs: auditLogs,
+        audit_logs: auditLogs
       };
 
       const payload = JSON.stringify(payloadObj);
@@ -174,7 +177,12 @@
       // Fall back to POST
       if (!result) {
         try {
-          const res = await this._getFetch()(settings.gasUrl, {
+          const sep = settings.gasUrl.includes('?') ? '&' : '?';
+          const postUrl = settings.gasUrl.includes('action=syncBatch') || settings.gasUrl.includes('syncBatch')
+            ? settings.gasUrl
+            : `${settings.gasUrl}${sep}action=syncBatch`;
+
+          const res = await this._getFetch()(postUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: payload
@@ -262,8 +270,8 @@
                 localMap.delete(local.id); // Deletion confirmed
               }
             } else if (local.sync_status === 'synced' && !remoteIds.has(String(local.id))) {
-              // Local transaction was not found on remote server -> Mark as pending_add to upload!
-              localMap.set(local.id, { ...local, sync_status: 'pending_add' });
+              // Local transaction was not found on remote server -> Purge locally!
+              localMap.delete(local.id);
             }
           });
 
@@ -293,12 +301,6 @@
         const merged = Array.from(localMap.values());
         db.saveTransactions(merged, { skipAutoPush: true });
 
-        try {
-          window.dispatchEvent(new CustomEvent('transactionschanged', { detail: { transactions: merged } }));
-          window.dispatchEvent(new CustomEvent('transactionupdated'));
-          window.dispatchEvent(new CustomEvent('transactiondeleted'));
-        } catch (_) {}
-
         // Merge remote categories if available
         if (Array.isArray(json.categories) && json.categories.length > 0) {
           const catMgr = global.CategoryManager;
@@ -313,7 +315,7 @@
           db.saveWallets(Array.from(walletMap.values()));
         }
 
-        // Merge remote assets, liabilities, loans if available
+        // Merge remote assets, liabilities, loans, recurring if available
         if (Array.isArray(json.assets) && json.assets.length > 0 && db.getAssets) {
           const existingAssets = db.getAssets();
           const assetMap = new Map(existingAssets.map(a => [a.id, a]));
@@ -329,9 +331,39 @@
         if (Array.isArray(json.loans) && json.loans.length > 0 && db.getLoans) {
           const existingLoans = db.getLoans();
           const loanMap = new Map(existingLoans.map(l => [l.id, l]));
-          json.loans.forEach(l => loanMap.set(l.id, l));
+          json.loans.forEach(l => {
+            let repayments = l.repayments;
+            if (typeof l.repayments_json === 'string') {
+              try {
+                repayments = JSON.parse(l.repayments_json);
+              } catch (_) {
+                repayments = [];
+              }
+            } else if (!Array.isArray(repayments)) {
+              repayments = [];
+            }
+            loanMap.set(l.id, { ...l, repayments });
+          });
           db._setItem('stc_loans', JSON.stringify(Array.from(loanMap.values())));
         }
+        if (Array.isArray(json.recurring) && json.recurring.length > 0 && db.getRecurring) {
+          const existingRec = db.getRecurring();
+          const recMap = new Map(existingRec.map(r => [r.id, r]));
+          json.recurring.forEach(r => recMap.set(r.id, r));
+          db._setItem('stc_recurring', JSON.stringify(Array.from(recMap.values())));
+        }
+
+        // Dispatch UI update events
+        try {
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('transactionschanged', { detail: { transactions: merged } }));
+            window.dispatchEvent(new CustomEvent('transactionupdated'));
+            window.dispatchEvent(new CustomEvent('transactiondeleted'));
+            window.dispatchEvent(new CustomEvent('walletschanged'));
+            window.dispatchEvent(new CustomEvent('assetschanged'));
+            window.dispatchEvent(new CustomEvent('loanschanged'));
+          }
+        } catch (_) {}
 
         this.isSyncing = false;
         this._updateStatus('success');

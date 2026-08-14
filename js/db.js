@@ -36,9 +36,11 @@
     }
     if (typeof d === 'string') {
       const cleaned = d.trim();
-      if (cleaned.includes('T')) return cleaned.split('T')[0];
-      if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) return cleaned;
-      d = new Date(cleaned);
+      if (!cleaned) {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      }
+      return cleaned;
     }
     if (d instanceof Date && !isNaN(d.getTime())) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -72,7 +74,9 @@
       wallet_id: walletId,
       wallet_name: walletName,
       created_at: created,
+      createdAt: created,
       updated_at: updated,
+      updatedAt: updated,
       sync_status: tx.sync_status || 'pending_add'
     };
   }
@@ -180,13 +184,17 @@
       const now = new Date().toISOString();
       const newTx = normalizeTransaction({
         id: data.id || generateId('tx'),
-        date: data.date || now.split('T')[0],
-        type: data.type === 'income' ? 'income' : 'expense',
+        date: data.date || formatLocalYMD(),
+        type: data.type === 'transfer' ? 'transfer' : (data.type === 'income' ? 'income' : 'expense'),
         category: data.category || (data.type === 'income' ? 'Lương' : 'Ăn uống'),
         amount,
         note: data.note || '',
-        created_at: data.created_at || now,
-        updated_at: data.updated_at || now,
+        wallet_id: data.wallet_id || data.walletId || 'wallet_cash',
+        wallet_name: data.wallet_name || data.walletName || 'Ví tiền mặt',
+        created_at: data.created_at || data.createdAt || now,
+        createdAt: data.createdAt || data.created_at || now,
+        updated_at: data.updated_at || data.updatedAt || now,
+        updatedAt: data.updatedAt || data.updated_at || now,
         sync_status: data.sync_status || 'pending_add'
       });
 
@@ -215,9 +223,11 @@
         (current.sync_status === 'synced' ? 'pending_update' : current.sync_status);
 
       all[idx] = normalizeTransaction({
-        ...current, ...data,
+        ...current,
+        ...data,
         amount,
         updated_at: now,
+        updatedAt: now,
         sync_status: syncStatus
       });
 
@@ -295,19 +305,28 @@
       if (!data || !data.name) throw new Error('Tên ví không được để trống');
       const wallets = this.getWallets(true);
       const existingIdx = data.id ? wallets.findIndex(w => w.id === data.id) : -1;
+      const existing = existingIdx !== -1 ? wallets[existingIdx] : null;
       const now = new Date().toISOString();
-      const initialBalance = Number(data.initial_balance ?? data.balance ?? 0);
+
+      let initialBalance;
+      if (data.initial_balance !== undefined) {
+        initialBalance = Number(data.initial_balance) || 0;
+      } else if (existing && existing.initial_balance !== undefined) {
+        initialBalance = Number(existing.initial_balance) || 0;
+      } else {
+        initialBalance = Number(data.balance || 0);
+      }
 
       const newWallet = {
         id: data.id || generateId('wallet'),
         name: String(data.name).trim(),
-        type: data.type || 'cash',
-        icon: data.icon || '💵',
-        color: data.color || '#10b981',
+        type: data.type || (existing ? existing.type : 'cash'),
+        icon: data.icon || (existing ? existing.icon : '💵'),
+        color: data.color || (existing ? existing.color : '#10b981'),
         initial_balance: initialBalance,
         balance: initialBalance,
-        is_default: data.is_default ? 1 : 0,
-        is_hidden: data.is_hidden ? 1 : 0,
+        is_default: data.is_default !== undefined ? (data.is_default ? 1 : 0) : (existing ? existing.is_default : 0),
+        is_hidden: data.is_hidden !== undefined ? (data.is_hidden ? 1 : 0) : (existing ? existing.is_hidden : 0),
         updated_at: now
       };
 
@@ -320,9 +339,10 @@
       } else {
         wallets.push(newWallet);
       }
+      this.recalculateWalletBalances(wallets);
       this.saveWallets(wallets);
-      this.logAuditEvent(existingIdx !== -1 ? 'update' : 'add', 'wallet', newWallet.id, existingIdx !== -1 ? wallets[existingIdx] : null, newWallet);
-      return newWallet;
+      this.logAuditEvent(existingIdx !== -1 ? 'update' : 'add', 'wallet', newWallet.id, existing, newWallet);
+      return wallets.find(w => w.id === newWallet.id) || newWallet;
     }
 
     deleteWallet(id) {
@@ -343,7 +363,7 @@
 
       txs.forEach(tx => {
         const wId = tx.wallet_id || 'wallet_cash';
-        const current = balanceMap.get(wId) || 0;
+        const current = balanceMap.has(wId) ? balanceMap.get(wId) : 0;
         if (tx.type === 'income') {
           balanceMap.set(wId, current + tx.amount);
         } else if (tx.type === 'expense') {
@@ -352,7 +372,7 @@
       });
 
       (walletsList || []).forEach(w => {
-        w.balance = balanceMap.get(w.id) || 0;
+        w.balance = balanceMap.has(w.id) ? balanceMap.get(w.id) : Number(w.initial_balance || 0);
       });
     }
 
@@ -365,7 +385,7 @@
       const toWallet = this.getWallet(toId);
       if (!fromWallet || !toWallet) throw new Error('Ví không hợp lệ');
 
-      const nowDate = date || new Date().toISOString().split('T')[0];
+      const nowDate = formatLocalYMD(date);
       const transferNote = note ? `Chuyển sang ${toWallet.name}: ${note}` : `Chuyển tiền sang ${toWallet.name}`;
       const receiveNote = note ? `Nhận từ ${fromWallet.name}: ${note}` : `Nhận tiền từ ${fromWallet.name}`;
 
@@ -538,16 +558,33 @@
       const loans = this.getLoans();
       const id = data.id || generateId('loan');
       const now = new Date().toISOString();
+      const existing = loans.find(l => l.id === id);
+
+      const originalAmount = Math.max(0, Number(data.original_amount !== undefined ? data.original_amount : (existing ? existing.original_amount : 0)) || 0);
+
+      let remainingAmount;
+      if (data.remaining_amount !== undefined) {
+        remainingAmount = Math.max(0, Number(data.remaining_amount) || 0);
+      } else if (existing && existing.remaining_amount !== undefined) {
+        remainingAmount = Math.max(0, Number(existing.remaining_amount) || 0);
+      } else {
+        remainingAmount = originalAmount;
+      }
+
+      const repayments = data.repayments !== undefined
+        ? (Array.isArray(data.repayments) ? data.repayments : [])
+        : (existing && Array.isArray(existing.repayments) ? existing.repayments : []);
+
       const newLoan = {
         id,
-        type: data.type === 'loan' ? 'loan' : 'debt',
-        person_name: String(data.person_name || 'Đối tác').trim(),
-        original_amount: Math.max(0, Number(data.original_amount) || 0),
-        remaining_amount: Math.max(0, Number(data.remaining_amount ?? data.original_amount) || 0),
-        due_date: data.due_date || '',
-        note: data.note || '',
-        status: (Number(data.remaining_amount ?? data.original_amount) || 0) <= 0 ? 'paid' : 'active',
-        repayments: data.repayments || [],
+        type: data.type || (existing ? existing.type : 'debt'),
+        person_name: String(data.person_name !== undefined ? data.person_name : (existing ? existing.person_name : 'Đối tác')).trim(),
+        original_amount: originalAmount,
+        remaining_amount: remainingAmount,
+        due_date: data.due_date !== undefined ? data.due_date : (existing ? existing.due_date : ''),
+        note: data.note !== undefined ? data.note : (existing ? existing.note : ''),
+        status: remainingAmount <= 0 ? 'paid' : (data.status || (existing ? existing.status : 'active')),
+        repayments: repayments,
         updated_at: now
       };
       const idx = loans.findIndex(l => l.id === id);
@@ -576,7 +613,7 @@
       const target = loans[idx];
       const principal = Math.max(0, Number(repaymentData.principal) || 0);
       const interest = Math.max(0, Number(repaymentData.interest) || 0);
-      const date = repaymentData.date || new Date().toISOString().split('T')[0];
+      const date = repaymentData.date || formatLocalYMD();
 
       target.remaining_amount = Math.max(0, target.remaining_amount - principal);
       if (target.remaining_amount <= 0) target.status = 'paid';
@@ -606,11 +643,6 @@
         });
       }
       return target;
-    }
-
-    deleteLoan(id) {
-      const loans = this.getLoans().filter(l => l.id !== id);
-      this._setItem(KEYS.LOAN, JSON.stringify(loans));
     }
 
     // Recurring Automated Ledger
@@ -765,64 +797,214 @@
     importSql(sqlText) {
       if (!sqlText || typeof sqlText !== 'string') throw new Error('Nội dung SQL không hợp lệ');
 
-      // Simple parser for INSERT INTO statements from dump
       const lines = sqlText.split('\n');
       const txs = [];
-      const cats = [];
+      const wallets = [];
+      const categories = [];
+      const assets = [];
+      const liabilities = [];
+      const loans = [];
+      const recurring = [];
+
+      const parseTokens = (rawVals) => {
+        const tokens = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < rawVals.length; i++) {
+          const char = rawVals[i];
+          if (char === "'" && inQuotes && rawVals[i + 1] === "'") {
+            current += "'";
+            i++;
+          } else if (char === "'") {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            tokens.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        if (current.trim()) tokens.push(current.trim());
+        return tokens;
+      };
+
+      const unescape = (val) => {
+        if (!val || val === 'NULL') return '';
+        if (val.startsWith("'") && val.endsWith("'")) {
+          return val.slice(1, -1).replace(/''/g, "'");
+        }
+        return val;
+      };
 
       lines.forEach(line => {
         const trimmed = line.trim();
-        if (trimmed.startsWith('INSERT INTO transactions') || trimmed.startsWith('INSERT OR REPLACE INTO transactions')) {
-          // Parse values
-          const match = trimmed.match(/VALUES\s*\((.+)\);$/i);
-          if (match) {
-            const rawVals = match[1];
-            // Primitive SQL value tokenizer
-            const tokens = [];
-            let current = '';
-            let inQuotes = false;
-            for (let i = 0; i < rawVals.length; i++) {
-              const char = rawVals[i];
-              if (char === "'" && rawVals[i + 1] === "'") {
-                current += "'";
-                i++;
-              } else if (char === "'") {
-                inQuotes = !inQuotes;
-              } else if (char === ',' && !inQuotes) {
-                tokens.push(current.trim());
-                current = '';
-              } else {
-                current += char;
-              }
-            }
-            if (current) tokens.push(current.trim());
+        const match = trimmed.match(/^INSERT (?:OR REPLACE )?INTO (\w+)\s*VALUES\s*\((.+)\);?$/i);
+        if (!match) return;
 
-            if (tokens.length >= 8) {
-              txs.push({
-                id: tokens[0].replace(/^'|'$/g, ''),
-                date: tokens[1].replace(/^'|'$/g, ''),
-                type: tokens[2].replace(/^'|'$/g, ''),
-                category: tokens[3].replace(/^'|'$/g, ''),
-                amount: parseFloat(tokens[4]) || 0,
-                note: tokens[5].replace(/^'|'$/g, ''),
-                created_at: tokens[6].replace(/^'|'$/g, ''),
-                updated_at: tokens[7].replace(/^'|'$/g, ''),
-                sync_status: tokens[8] ? tokens[8].replace(/^'|'$/g, '') : 'pending_add'
-              });
-            }
+        const table = match[1].toLowerCase();
+        const rawVals = match[2];
+        const tokens = parseTokens(rawVals);
+
+        if (table === 'transactions') {
+          if (tokens.length >= 11) {
+            txs.push({
+              id: unescape(tokens[0]),
+              date: unescape(tokens[1]),
+              type: unescape(tokens[2]),
+              category: unescape(tokens[3]),
+              amount: parseFloat(tokens[4]) || 0,
+              note: unescape(tokens[5]),
+              wallet_id: unescape(tokens[6]) || 'wallet_cash',
+              wallet_name: unescape(tokens[7]) || 'Ví tiền mặt',
+              created_at: unescape(tokens[8]),
+              updated_at: unescape(tokens[9]),
+              sync_status: unescape(tokens[10]) || 'pending_add'
+            });
+          } else if (tokens.length >= 8) {
+            txs.push({
+              id: unescape(tokens[0]),
+              date: unescape(tokens[1]),
+              type: unescape(tokens[2]),
+              category: unescape(tokens[3]),
+              amount: parseFloat(tokens[4]) || 0,
+              note: unescape(tokens[5]),
+              wallet_id: 'wallet_cash',
+              wallet_name: 'Ví tiền mặt',
+              created_at: unescape(tokens[6]),
+              updated_at: unescape(tokens[7]),
+              sync_status: unescape(tokens[8]) || 'pending_add'
+            });
           }
+        } else if (table === 'wallets' && tokens.length >= 6) {
+          wallets.push({
+            id: unescape(tokens[0]),
+            name: unescape(tokens[1]),
+            type: unescape(tokens[2]),
+            icon: unescape(tokens[3]),
+            color: unescape(tokens[4]),
+            initial_balance: parseFloat(tokens[5]) || 0,
+            balance: parseFloat(tokens[5]) || 0,
+            is_default: parseInt(tokens[6], 10) === 1 ? 1 : 0,
+            is_hidden: parseInt(tokens[7], 10) === 1 ? 1 : 0
+          });
+        } else if (table === 'categories' && tokens.length >= 5) {
+          categories.push({
+            id: unescape(tokens[0]),
+            name: unescape(tokens[1]),
+            type: unescape(tokens[2]),
+            icon: unescape(tokens[3]),
+            color: unescape(tokens[4]),
+            is_hidden: parseInt(tokens[5], 10) === 1,
+            sort_order: parseInt(tokens[6], 10) || 0
+          });
+        } else if (table === 'assets' && tokens.length >= 4) {
+          assets.push({
+            id: unescape(tokens[0]),
+            name: unescape(tokens[1]),
+            category: unescape(tokens[2]),
+            value: parseFloat(tokens[3]) || 0,
+            note: unescape(tokens[4]),
+            updated_at: unescape(tokens[5])
+          });
+        } else if (table === 'liabilities' && tokens.length >= 5) {
+          liabilities.push({
+            id: unescape(tokens[0]),
+            name: unescape(tokens[1]),
+            category: unescape(tokens[2]),
+            total_debt: parseFloat(tokens[3]) || 0,
+            remaining_debt: parseFloat(tokens[4]) || 0,
+            note: unescape(tokens[5]),
+            updated_at: unescape(tokens[6])
+          });
+        } else if (table === 'loans' && tokens.length >= 8) {
+          let repayments = [];
+          try { repayments = JSON.parse(unescape(tokens[8]) || '[]'); } catch (_) {}
+          loans.push({
+            id: unescape(tokens[0]),
+            type: unescape(tokens[1]),
+            person_name: unescape(tokens[2]),
+            original_amount: parseFloat(tokens[3]) || 0,
+            remaining_amount: parseFloat(tokens[4]) || 0,
+            due_date: unescape(tokens[5]),
+            note: unescape(tokens[6]),
+            status: unescape(tokens[7]),
+            repayments: Array.isArray(repayments) ? repayments : [],
+            updated_at: unescape(tokens[9])
+          });
+        } else if (table === 'recurring' && tokens.length >= 7) {
+          recurring.push({
+            id: unescape(tokens[0]),
+            type: unescape(tokens[1]),
+            amount: parseFloat(tokens[2]) || 0,
+            category: unescape(tokens[3]),
+            note: unescape(tokens[4]),
+            frequency: unescape(tokens[5]),
+            day_of_month: parseInt(tokens[6], 10) || 1,
+            last_run_date: unescape(tokens[7]),
+            is_active: parseInt(tokens[8], 10) !== 0
+          });
         }
       });
+
+      if (wallets.length > 0) {
+        const existingWallets = this.getWallets(true);
+        const map = new Map(existingWallets.map(w => [w.id, w]));
+        wallets.forEach(w => map.set(w.id, { ...map.get(w.id), ...w }));
+        this.saveWallets(Array.from(map.values()));
+      }
+
+      if (categories.length > 0) {
+        this.saveCategories(categories);
+      }
+
+      if (assets.length > 0) {
+        const existing = this.getAssets();
+        const map = new Map(existing.map(a => [a.id, a]));
+        assets.forEach(a => map.set(a.id, a));
+        this._setItem(KEYS.ASSET, JSON.stringify(Array.from(map.values())));
+      }
+
+      if (liabilities.length > 0) {
+        const existing = this.getLiabilities();
+        const map = new Map(existing.map(l => [l.id, l]));
+        liabilities.forEach(l => map.set(l.id, l));
+        this._setItem(KEYS.LIABILITY, JSON.stringify(Array.from(map.values())));
+      }
+
+      if (loans.length > 0) {
+        const existing = this.getLoans();
+        const map = new Map(existing.map(l => [l.id, l]));
+        loans.forEach(l => map.set(l.id, l));
+        this._setItem(KEYS.LOAN, JSON.stringify(Array.from(map.values())));
+      }
+
+      if (recurring.length > 0) {
+        const existing = this.getRecurring();
+        const map = new Map(existing.map(r => [r.id, r]));
+        recurring.forEach(r => map.set(r.id, r));
+        this._setItem(KEYS.RECURRING, JSON.stringify(Array.from(map.values())));
+      }
 
       if (txs.length > 0) {
         const existing = this._loadAll();
         const map = new Map(existing.map(t => [t.id, t]));
-        txs.forEach(t => map.set(t.id, t));
+        txs.forEach(t => map.set(t.id, normalizeTransaction(t)));
         const merged = Array.from(map.values());
         this.saveTransactions(merged);
+        const allWallets = this.getWallets(true);
+        this.recalculateWalletBalances(allWallets);
+        this.saveWallets(allWallets);
       }
 
-      return { imported_transactions: txs.length };
+      return {
+        imported_transactions: txs.length,
+        imported_wallets: wallets.length,
+        imported_categories: categories.length,
+        imported_assets: assets.length,
+        imported_liabilities: liabilities.length,
+        imported_loans: loans.length,
+        imported_recurring: recurring.length
+      };
     }
   }
 

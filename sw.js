@@ -11,7 +11,14 @@ const PRECACHE_ASSETS = [
   './index.html',
   './style.css',
   './app.js',
+  './js/db.js',
+  './js/sync.js',
+  './js/categories.js',
+  './js/history.js',
+  './js/charts.js',
+  './js/auth.js',
   './manifest.json',
+  './icons/logo.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-192.png',
@@ -68,13 +75,13 @@ self.addEventListener('activate', (event) => {
    3. Fetch Event
    - Intercepts HTTP/HTTPS GET requests
    - Implements Stale-While-Revalidate and Cache-First strategies
-   - Bypasses non-GET and API requests (e.g. Google Apps Script)
+   - Bypasses non-GET and API requests (e.g. Google Apps Script, Cloudflare Workers)
    -------------------------------------------------------------------------- */
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // 1. Skip non-GET requests (e.g., POST/PUT requests for GAS sync)
+  // 1. Skip non-GET requests (e.g., POST/PUT requests for sync)
   if (request.method !== 'GET') {
     return;
   }
@@ -84,8 +91,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Bypass Service Worker cache for Google Apps Script Web App requests
-  if (url.hostname.includes('script.google.com') || url.hostname.includes('script.googleusercontent.com')) {
+  // 3. Bypass Service Worker cache for Google Apps Script & Cloudflare Worker API requests
+  if (
+    url.hostname.includes('script.google.com') ||
+    url.hostname.includes('script.googleusercontent.com') ||
+    url.hostname.includes('workers.dev') ||
+    url.pathname.startsWith('/api/')
+  ) {
     return; // Pass through directly to network
   }
 

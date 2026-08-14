@@ -471,9 +471,9 @@ async function runTier1Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
     const summary = localEnv.context.ChartManager.calculateSummary(localEnv.context.DB.getTransactions());
     localEnv.context.ChartManager.updateSummaryCards(summary);
 
-    const incEl = localEnv.document.getElementById('total-income');
-    const expEl = localEnv.document.getElementById('total-expense');
-    const balEl = localEnv.document.getElementById('net-balance');
+    const incEl = localEnv.document.getElementById('total-income') || localEnv.document.getElementById('report-total-income');
+    const expEl = localEnv.document.getElementById('total-expense') || localEnv.document.getElementById('report-total-expense');
+    const balEl = localEnv.document.getElementById('net-balance') || localEnv.document.getElementById('report-net-balance');
 
     TestAssert.contains(incEl.textContent, '10.000.000', 'Total Income card text content must display formatted amount');
     TestAssert.contains(expEl.textContent, '3.000.000', 'Total Expense card text content must display formatted amount');
@@ -491,15 +491,15 @@ async function runTier1Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
     TestAssert.isTrue(/id="view-settings"|data-route="settings"/i.test(html), 'index.html must contain settings view section');
   }));
 
-  results.push(await runTestCase('F8.2', 'GAS Endpoint URL Format Validation', async () => {
+  results.push(await runTestCase('F8.2', 'GAS & Cloudflare Worker Endpoint URL Format Validation', async () => {
     const syncPath = path.join(projectRoot, 'js/sync.js');
     TestAssert.isTrue(fs.existsSync(syncPath), 'js/sync.js file must exist');
     const localEnv = new TestEnvironment(projectRoot);
     localEnv.loadSourceFiles();
     TestAssert.isOk(localEnv.context.SyncEngine, 'SyncEngine module must be loaded');
-    const valid = localEnv.context.SyncEngine.validateUrl('https://script.google.com/macros/s/AKfycbx_mock/exec');
-    const invalid = localEnv.context.SyncEngine.validateUrl('http://invalid-url.com');
-    TestAssert.isTrue(valid, 'Valid GAS URL format should pass validation');
+    const valid = localEnv.context.SyncEngine.validateUrl('https://sothuchi-sqlite-backend.mrdong-sothuchi.workers.dev');
+    const invalid = localEnv.context.SyncEngine.validateUrl('not-a-valid-url');
+    TestAssert.isTrue(valid, 'Valid Worker URL format should pass validation');
     TestAssert.isFalse(invalid, 'Invalid URL format should fail validation');
   }));
 
@@ -532,51 +532,50 @@ async function runTier1Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
   }));
 
   // --------------------------------------------------------------------------
-  // FEATURE 9: Google Apps Script Backend (Code.gs) (F9.1 - F9.5)
   // --------------------------------------------------------------------------
-  results.push(await runTestCase('F9.1', 'Code.gs File Existence & Function Handlers', async () => {
-    const codeGsPath = path.join(projectRoot, 'Code.gs');
-    TestAssert.isTrue(fs.existsSync(codeGsPath), 'Code.gs backend file must exist in project root');
-    const codeContent = fs.readFileSync(codeGsPath, 'utf8');
-    TestAssert.contains(codeContent, 'function doGet', 'Code.gs must define function doGet');
-    TestAssert.contains(codeContent, 'function doPost', 'Code.gs must define function doPost');
+  // FEATURE 9: Cloudflare Worker & D1 SQLite Backend (worker.js, schema.sql) (F9.1 - F9.5)
+  // --------------------------------------------------------------------------
+  results.push(await runTestCase('F9.1', 'worker.js File Existence & Endpoint Handlers', async () => {
+    const workerPath = path.join(projectRoot, 'worker.js');
+    TestAssert.isTrue(fs.existsSync(workerPath), 'worker.js backend file must exist in project root');
+    const codeContent = fs.readFileSync(workerPath, 'utf8');
+    TestAssert.contains(codeContent, 'fetch', 'worker.js must export fetch handler');
+    TestAssert.contains(codeContent, 'syncBatch', 'worker.js must handle syncBatch endpoint');
   }));
 
-  results.push(await runTestCase('F9.2', 'Code.gs 8 Column Schema Definition', async () => {
-    const codeGsPath = path.join(projectRoot, 'Code.gs');
-    TestAssert.isTrue(fs.existsSync(codeGsPath), 'Code.gs backend file must exist');
-    const codeContent = fs.readFileSync(codeGsPath, 'utf8');
-    TestAssert.contains(codeContent, 'ID', 'Code.gs schema must contain column ID');
-    TestAssert.contains(codeContent, 'Ngày', 'Code.gs schema must contain column Ngày');
-    TestAssert.contains(codeContent, 'Loại', 'Code.gs schema must contain column Loại');
-    TestAssert.contains(codeContent, 'Hạng mục', 'Code.gs schema must contain column Hạng mục');
-    TestAssert.contains(codeContent, 'Số tiền', 'Code.gs schema must contain column Số tiền');
-    TestAssert.contains(codeContent, 'Ghi chú', 'Code.gs schema must contain column Ghi chú');
-    TestAssert.contains(codeContent, 'Thời gian tạo', 'Code.gs schema must contain column Thời gian tạo');
-    TestAssert.contains(codeContent, 'Thời gian cập nhật', 'Code.gs schema must contain column Thời gian cập nhật');
+  results.push(await runTestCase('F9.2', 'D1 Schema Definition & Columns', async () => {
+    const schemaPath = path.join(projectRoot, 'schema.sql');
+    TestAssert.isTrue(fs.existsSync(schemaPath), 'schema.sql file must exist');
+    const codeContent = fs.readFileSync(schemaPath, 'utf8');
+    TestAssert.contains(codeContent, 'transactions', 'schema.sql must contain transactions table');
+    TestAssert.contains(codeContent, 'wallets', 'schema.sql must contain wallets table');
+    TestAssert.contains(codeContent, 'categories', 'schema.sql must contain categories table');
+    TestAssert.contains(codeContent, 'assets', 'schema.sql must contain assets table');
+    TestAssert.contains(codeContent, 'liabilities', 'schema.sql must contain liabilities table');
+    TestAssert.contains(codeContent, 'loans', 'schema.sql must contain loans table');
   }));
 
-  results.push(await runTestCase('F9.3', 'Code.gs doGet action=ping and action=fetchAll', async () => {
-    const codeGsPath = path.join(projectRoot, 'Code.gs');
-    TestAssert.isTrue(fs.existsSync(codeGsPath), 'Code.gs backend file must exist');
-    const codeContent = fs.readFileSync(codeGsPath, 'utf8');
-    TestAssert.contains(codeContent, 'action', 'Code.gs doGet must check action parameter');
-    TestAssert.contains(codeContent, 'ping', 'Code.gs doGet must handle ping action');
-    TestAssert.contains(codeContent, 'fetchAll', 'Code.gs doGet must handle fetchAll action');
+  results.push(await runTestCase('F9.3', 'worker.js fetchAll and ping action handling', async () => {
+    const workerPath = path.join(projectRoot, 'worker.js');
+    TestAssert.isTrue(fs.existsSync(workerPath), 'worker.js backend file must exist');
+    const codeContent = fs.readFileSync(workerPath, 'utf8');
+    TestAssert.contains(codeContent, 'action', 'worker.js must check action parameter');
+    TestAssert.contains(codeContent, 'ping', 'worker.js must handle ping action');
+    TestAssert.contains(codeContent, 'fetchAll', 'worker.js must handle fetchAll action');
   }));
 
-  results.push(await runTestCase('F9.4', 'Code.gs doPost action=syncBatch Batch Processing', async () => {
-    const codeGsPath = path.join(projectRoot, 'Code.gs');
-    TestAssert.isTrue(fs.existsSync(codeGsPath), 'Code.gs backend file must exist');
-    const codeContent = fs.readFileSync(codeGsPath, 'utf8');
-    TestAssert.contains(codeContent, 'syncBatch', 'Code.gs doPost must handle syncBatch action');
+  results.push(await runTestCase('F9.4', 'worker.js syncBatch Batch Processing', async () => {
+    const workerPath = path.join(projectRoot, 'worker.js');
+    TestAssert.isTrue(fs.existsSync(workerPath), 'worker.js backend file must exist');
+    const codeContent = fs.readFileSync(workerPath, 'utf8');
+    TestAssert.contains(codeContent, 'syncBatch', 'worker.js must handle syncBatch action');
   }));
 
-  results.push(await runTestCase('F9.5', 'Code.gs LockService Concurrency Guard', async () => {
-    const codeGsPath = path.join(projectRoot, 'Code.gs');
-    TestAssert.isTrue(fs.existsSync(codeGsPath), 'Code.gs backend file must exist');
-    const codeContent = fs.readFileSync(codeGsPath, 'utf8');
-    TestAssert.isTrue(/LockService\.getScriptLock\(\)/.test(codeContent), 'Code.gs must use LockService.getScriptLock() concurrency guard');
+  results.push(await runTestCase('F9.5', 'worker.js executeBatchSafe Chunking Guard', async () => {
+    const workerPath = path.join(projectRoot, 'worker.js');
+    TestAssert.isTrue(fs.existsSync(workerPath), 'worker.js backend file must exist');
+    const codeContent = fs.readFileSync(workerPath, 'utf8');
+    TestAssert.contains(codeContent, 'executeBatchSafe', 'worker.js must implement executeBatchSafe statement chunker');
   }));
 
   // --------------------------------------------------------------------------

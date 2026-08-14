@@ -1,47 +1,35 @@
 # E2E Test Infra: Sổ Thu Chi Cá Nhân
 
 ## Test Philosophy
-- Opaque-box, requirement-driven. No dependency on implementation design.
-- Methodology: Category-Partition + BVA + Pairwise + Workload Testing.
+- Requirement-driven, opaque-box testing.
+- Verification methodology: Category-Partition + Boundary Value Analysis + Pairwise Interaction + Real-World Workload Testing.
 
 ## Feature Inventory
-| # | Feature | Source (requirement) | Tier 1 | Tier 2 | Tier 3 |
-|---|---------|---------------------|:------:|:------:|:------:|
-| 1 | PWA Manifest & App Shell | ORIGINAL_REQUEST § R1 | 5 | 5 | ✓ |
-| 2 | Service Worker & Offline Caching | ORIGINAL_REQUEST § R1 | 5 | 5 | ✓ |
-| 3 | Core Data Model & LocalStorage Manager | ORIGINAL_REQUEST § R1, R2 | 5 | 5 | ✓ |
-| 4 | Quick Transaction Entry Form | ORIGINAL_REQUEST § R2 | 5 | 5 | ✓ |
-| 5 | Category Customization System | ORIGINAL_REQUEST § R2 | 5 | 5 | ✓ |
-| 6 | Transaction History & Filter/Search | ORIGINAL_REQUEST § R2 | 5 | 5 | ✓ |
-| 7 | Visual Statistics & Chart.js Reports | ORIGINAL_REQUEST § R2 | 5 | 5 | ✓ |
-| 8 | Settings View & GAS Endpoint Config | ORIGINAL_REQUEST § R3 | 5 | 5 | ✓ |
-| 9 | Google Apps Script Backend (`Code.gs`) | ORIGINAL_REQUEST § R3 | 5 | 5 | ✓ |
-| 10 | 2-Way Sync Engine & Offline Queue | ORIGINAL_REQUEST § R3 | 5 | 5 | ✓ |
-| 11 | User Integration & Setup Guide | ORIGINAL_REQUEST § R3 | 5 | 5 | ✓ |
+| # | Feature | Source (Requirement) | Tier 1 | Tier 2 | Tier 3 |
+|---|---------|----------------------|:------:|:------:|:------:|
+| 1 | Multi-wallet balance accounting & isolation | ORIGINAL_REQUEST §R1 | 5 | 5 | ✓ |
+| 2 | Transaction CRUD & local persistence | ORIGINAL_REQUEST §R1 | 5 | 5 | ✓ |
+| 3 | Bidirectional D1 SQLite Sync & deletion sync | ORIGINAL_REQUEST §R1 | 5 | 5 | ✓ |
+| 4 | SQL backup export and import integrity | ORIGINAL_REQUEST §R1 | 5 | 5 | ✓ |
+| 5 | Loan, debt and asset lifecycle | ORIGINAL_REQUEST §R1 | 5 | 5 | ✓ |
+| 6 | Vietnamese currency & number-to-words formatting | ORIGINAL_REQUEST §R2 | 5 | 5 | ✓ |
+| 7 | Modal interaction, Escape, backdrop click | ORIGINAL_REQUEST §R2 | 5 | 5 | ✓ |
+| 8 | Report KPI calculations & 50/30/20 cash flow | ORIGINAL_REQUEST §R2 | 5 | 5 | ✓ |
+| 9 | Offline PWA caching & Service Worker | ORIGINAL_REQUEST §R1 | 5 | 5 | ✓ |
+| 10| Syntax check & deployment configuration | ORIGINAL_REQUEST §R3 | 5 | 5 | ✓ |
 
 ## Test Architecture
-- Test runner: Node.js E2E Test Suite Runner (`tests/run-all-tests.js`)
-- Test case format: Standardized JavaScript test modules exporting async test runners with detailed assertion logs.
-- Directory layout:
-  - `/tests/run-all-tests.js`: Main test suite runner
-  - `/tests/tier1_features.test.js`: Tier 1 Feature Coverage tests (55 test cases, 5 per feature)
-  - `/tests/tier2_boundaries.test.js`: Tier 2 Boundary & Corner Case tests (55 test cases, 5 per feature)
-  - `/tests/tier3_pairwise.test.js`: Tier 3 Cross-Feature Pairwise Interaction tests (11 test cases)
-  - `/tests/tier4_scenarios.test.js`: Tier 4 Real-World Application Scenarios (5 test cases)
-  - `/tests/test-utils.js`: Shared test harness utilities (mock DOM/browser environment, assertion helpers, GAS mock server, offline storage emulator)
-
-## Real-World Application Scenarios (Tier 4)
-| # | Scenario | Features Exercised | Complexity |
-|---|----------|--------------------|------------|
-| 1 | Daily Expense Recording & Offline Sync | F3, F4, F6, F7, F10 | Medium |
-| 2 | Custom Category Setup & Transaction Categorization | F3, F4, F5, F6, F7 | Medium |
-| 3 | Apps Script Endpoint Setup & 2-Way Sync Protocol | F8, F9, F10, F11 | High |
-| 4 | PWA Installation, Offline Mode & Service Worker Cache | F1, F2, F3, F4, F10 | High |
-| 5 | Monthly Financial Review & Filtering Report Generation | F3, F6, F7, F8 | Medium |
+- Test Runner: Node.js test scripts executing with mock DOM/LocalStorage and direct assertions.
+- Verification Commands:
+  - `node tests/run-all-tests.js`
+  - `node tests/m2_verification.test.js`
+  - `node tests/m3_verification.test.js`
+  - `node tests/deletion_sync.test.js`
+  - `node -c app.js sw.js worker.js js/*.js tests/*.js`
 
 ## Coverage Thresholds
-- Tier 1: ≥5 per feature (55 total across 11 features)
-- Tier 2: ≥5 per feature (55 total across 11 features)
-- Tier 3: pairwise coverage of major feature interactions (11 total)
-- Tier 4: ≥5 realistic application scenarios (5 total)
-- Total Test Cases: 126 test cases
+- Tier 1: >=5 test cases per feature (50+ cases)
+- Tier 2: >=5 test cases per feature for boundary/corner conditions (50+ cases)
+- Tier 3: Pairwise feature interactions (10+ scenarios)
+- Tier 4: Real-world user financial workflows (5+ application scenarios)
+- Tier 5: Adversarial edge-case stress tests & Forensic Integrity Audit

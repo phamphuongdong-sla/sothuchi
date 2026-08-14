@@ -40,10 +40,12 @@ CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);
 -- 3. Bảng Hạng Mục Thu Chi (Categories)
 CREATE TABLE IF NOT EXISTS categories (
   id TEXT PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
   type TEXT NOT NULL CHECK(type IN ('income', 'expense', 'transfer')),
   icon TEXT DEFAULT '📁',
   color TEXT DEFAULT '#4f46e5',
+  group_name TEXT DEFAULT '',
+  group_id TEXT DEFAULT '',
   is_hidden INTEGER DEFAULT 0,         -- 0: Hiện, 1: Ẩn
   sort_order INTEGER DEFAULT 0
 );

@@ -163,10 +163,10 @@ async function runTier3Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
     TestAssert.equal(summary.totalExpense, 200000);
   }));
 
-  // P10: F8 x F9 (Settings x GAS Backend)
-  results.push(await runTestCase('P10', 'P10: Settings ping request matches expected Code.gs response contract (F8 x F9)', async () => {
-    const codeGsPath = path.join(projectRoot, 'Code.gs');
-    TestAssert.isTrue(fs.existsSync(codeGsPath), 'Code.gs file must exist');
+  // P10: F8 x F9 (Settings x Worker Backend)
+  results.push(await runTestCase('P10', 'P10: Settings ping request matches expected Worker response contract (F8 x F9)', async () => {
+    const workerPath = path.join(projectRoot, 'worker.js');
+    TestAssert.isTrue(fs.existsSync(workerPath), 'worker.js file must exist');
     const env = new TestEnvironment(projectRoot);
     env.loadSourceFiles();
     TestAssert.isOk(env.context.SyncEngine, 'SyncEngine module must be loaded');
@@ -174,10 +174,10 @@ async function runTier3Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
     TestAssert.isTrue(isValid);
   }));
 
-  // P11: F9 x F10 (GAS Backend x Sync Engine)
-  results.push(await runTestCase('P11', 'P11: Code.gs syncBatch ACK updates local DB sync states to synced (F9 x F10)', async () => {
-    const codeGsPath = path.join(projectRoot, 'Code.gs');
-    TestAssert.isTrue(fs.existsSync(codeGsPath), 'Code.gs file must exist');
+  // P11: F9 x F10 (Worker Backend x Sync Engine)
+  results.push(await runTestCase('P11', 'P11: worker.js syncBatch ACK updates local DB sync states to synced (F9 x F10)', async () => {
+    const workerPath = path.join(projectRoot, 'worker.js');
+    TestAssert.isTrue(fs.existsSync(workerPath), 'worker.js file must exist');
     const env = new TestEnvironment(projectRoot);
     env.loadSourceFiles();
     TestAssert.isOk(env.context.SyncEngine, 'SyncEngine module must be loaded');

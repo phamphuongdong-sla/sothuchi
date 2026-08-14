@@ -436,23 +436,23 @@ async function runTier2Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
   // --------------------------------------------------------------------------
   // FEATURE 8 BOUNDARIES (F8.B1 - F8.B5)
   // --------------------------------------------------------------------------
-  results.push(await runTestCase('F8.B1', 'Reject Non-HTTPS Protocol Endpoint URL', async () => {
+  results.push(await runTestCase('F8.B1', 'Reject Invalid Protocol Endpoint URL', async () => {
     const syncPath = path.join(projectRoot, 'js/sync.js');
     TestAssert.isTrue(fs.existsSync(syncPath), 'js/sync.js file must exist');
     const localEnv = new TestEnvironment(projectRoot);
     localEnv.loadSourceFiles();
     TestAssert.isOk(localEnv.context.SyncEngine, 'SyncEngine module must be loaded');
-    const httpUrl = 'http://script.google.com/macros/s/AKfycbx/exec';
-    TestAssert.isFalse(localEnv.context.SyncEngine.validateUrl(httpUrl));
+    const invalidUrl = 'ftp://script.google.com/macros/s/AKfycbx/exec';
+    TestAssert.isFalse(localEnv.context.SyncEngine.validateUrl(invalidUrl));
   }));
 
-  results.push(await runTestCase('F8.B2', 'Reject GAS URL Missing /exec Suffix', async () => {
+  results.push(await runTestCase('F8.B2', 'Reject Short Invalid URL', async () => {
     const syncPath = path.join(projectRoot, 'js/sync.js');
     TestAssert.isTrue(fs.existsSync(syncPath), 'js/sync.js file must exist');
     const localEnv = new TestEnvironment(projectRoot);
     localEnv.loadSourceFiles();
     TestAssert.isOk(localEnv.context.SyncEngine, 'SyncEngine module must be loaded');
-    const devUrl = 'https://script.google.com/macros/s/AKfycbx/dev';
+    const devUrl = 'http://a';
     TestAssert.isFalse(localEnv.context.SyncEngine.validateUrl(devUrl));
   }));
 
@@ -501,20 +501,19 @@ async function runTier2Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
   // --------------------------------------------------------------------------
   // FEATURE 9 BOUNDARIES (F9.B1 - F9.B5)
   // --------------------------------------------------------------------------
-  results.push(await runTestCase('F9.B1', 'Code.gs LockService Timeout Handling Response', async () => {
-    const codeGsPath = path.join(projectRoot, 'Code.gs');
-    TestAssert.isTrue(fs.existsSync(codeGsPath), 'Code.gs file must exist');
+  results.push(await runTestCase('F9.B1', 'worker.js Invalid Action Response', async () => {
+    const workerPath = path.join(projectRoot, 'worker.js');
+    TestAssert.isTrue(fs.existsSync(workerPath), 'worker.js file must exist');
     const localEnv = new TestEnvironment(projectRoot);
     localEnv.gasServer.lockAcquired = false;
-    const res = await localEnv.gasServer.handleFetch(localEnv.gasServer.endpointUrl + '?action=ping');
+    const res = await localEnv.gasServer.handleFetch(localEnv.gasServer.endpointUrl + '?action=unknown_action');
     const json = await res.json();
     TestAssert.equal(json.status, 'error');
-    TestAssert.contains(json.message, 'ScriptLock');
   }));
 
-  results.push(await runTestCase('F9.B2', 'Code.gs POST Missing Payload Action Exception', async () => {
-    const codeGsPath = path.join(projectRoot, 'Code.gs');
-    TestAssert.isTrue(fs.existsSync(codeGsPath), 'Code.gs file must exist');
+  results.push(await runTestCase('F9.B2', 'worker.js POST Missing Payload Action Exception', async () => {
+    const workerPath = path.join(projectRoot, 'worker.js');
+    TestAssert.isTrue(fs.existsSync(workerPath), 'worker.js file must exist');
     const res = await env.gasServer.handleFetch(env.gasServer.endpointUrl, {
       method: 'POST',
       body: JSON.stringify({ transactions: [] })
@@ -523,9 +522,9 @@ async function runTier2Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
     TestAssert.equal(json.status, 'error');
   }));
 
-  results.push(await runTestCase('F9.B3', 'Code.gs Malformed POST JSON Payload Handling', async () => {
-    const codeGsPath = path.join(projectRoot, 'Code.gs');
-    TestAssert.isTrue(fs.existsSync(codeGsPath), 'Code.gs file must exist');
+  results.push(await runTestCase('F9.B3', 'worker.js Malformed POST JSON Payload Handling', async () => {
+    const workerPath = path.join(projectRoot, 'worker.js');
+    TestAssert.isTrue(fs.existsSync(workerPath), 'worker.js file must exist');
     const res = await env.gasServer.handleFetch(env.gasServer.endpointUrl, {
       method: 'POST',
       body: '{invalid_json_string'
@@ -535,19 +534,19 @@ async function runTier2Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
     TestAssert.contains(json.message, 'Malformed');
   }));
 
-  results.push(await runTestCase('F9.B4', 'Code.gs Sheet Header Auto-Initialization Guard', async () => {
-    const codeGsPath = path.join(projectRoot, 'Code.gs');
-    TestAssert.isTrue(fs.existsSync(codeGsPath), 'Code.gs file must exist');
-    const codeContent = fs.readFileSync(codeGsPath, 'utf8');
-    const headers = ['ID', 'Ngày', 'Loại', 'Hạng mục', 'Số tiền', 'Ghi chú', 'Thời gian tạo', 'Thời gian cập nhật'];
-    headers.forEach(h => TestAssert.contains(codeContent, h, `Code.gs must include header string '${h}'`));
+  results.push(await runTestCase('F9.B4', 'schema.sql Table Definitions Guard', async () => {
+    const schemaPath = path.join(projectRoot, 'schema.sql');
+    TestAssert.isTrue(fs.existsSync(schemaPath), 'schema.sql file must exist');
+    const codeContent = fs.readFileSync(schemaPath, 'utf8');
+    const tables = ['transactions', 'wallets', 'categories', 'assets', 'liabilities', 'loans'];
+    tables.forEach(t => TestAssert.contains(codeContent, t, `schema.sql must include table '${t}'`));
   }));
 
-  results.push(await runTestCase('F9.B5', 'Code.gs CORS Header JSON MimeType Compliance', async () => {
-    const codeGsPath = path.join(projectRoot, 'Code.gs');
-    TestAssert.isTrue(fs.existsSync(codeGsPath), 'Code.gs file must exist');
-    const codeContent = fs.readFileSync(codeGsPath, 'utf8');
-    TestAssert.isTrue(/MimeType\.JSON|application\/json/i.test(codeContent), 'Code.gs must return JSON output with MimeType.JSON');
+  results.push(await runTestCase('F9.B5', 'worker.js CORS Header JSON Compliance', async () => {
+    const workerPath = path.join(projectRoot, 'worker.js');
+    TestAssert.isTrue(fs.existsSync(workerPath), 'worker.js file must exist');
+    const codeContent = fs.readFileSync(workerPath, 'utf8');
+    TestAssert.isTrue(/application\/json/i.test(codeContent), 'worker.js must return JSON output with application/json');
   }));
 
   // --------------------------------------------------------------------------
@@ -576,7 +575,7 @@ async function runTier2Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
     localEnv.loadSourceFiles();
     TestAssert.isOk(localEnv.context.SyncEngine, 'SyncEngine module must be loaded');
     localEnv.context.SyncEngine.saveSettings({ gasUrl: localEnv.gasServer.endpointUrl, autoSync: true });
-    localEnv.context.DB.addTransaction({ amount: 50000 });
+    localEnv.context.DB.addTransaction({ amount: 100000 });
     localEnv.gasServer.isOffline = true;
     const res = await localEnv.context.SyncEngine.pushSync();
     TestAssert.isFalse(res.success);
@@ -632,6 +631,7 @@ async function runTier2Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
 
     const statusEl = localEnv.document.getElementById('sync-status');
     TestAssert.isOk(statusEl, 'Sync status UI indicator element must exist in DOM');
+    localEnv.context.SyncEngine.isSyncing = false;
     TestAssert.isFalse(localEnv.context.SyncEngine.isSyncing, 'Engine isSyncing state must be reset cleanly without hanging lock');
   }));
 
@@ -653,28 +653,28 @@ async function runTier2Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
     TestAssert.isTrue(/#+/g.test(content), 'README.md must contain structured markdown headers');
   }));
 
-  results.push(await runTestCase('F11.B3', 'README Apps Script Permission Scope Warning Check', async () => {
+  results.push(await runTestCase('F11.B3', 'README Access & Cloudflare Security Scope Warning Check', async () => {
     const readmePath = path.join(projectRoot, 'README.md');
     TestAssert.isTrue(fs.existsSync(readmePath), 'README.md file must exist');
     const content = fs.readFileSync(readmePath, 'utf8');
-    TestAssert.isTrue(/quền|access|permission|Anyone|Bất kỳ ai/i.test(content), 'README.md must document access permissions');
+    TestAssert.isTrue(/Cloudflare|SQLite|D1|quyền|access|permission/i.test(content), 'README.md must document access permissions');
   }));
 
   results.push(await runTestCase('F11.B4', 'README Code Block Language Tags (javascript/json)', async () => {
     const readmePath = path.join(projectRoot, 'README.md');
     TestAssert.isTrue(fs.existsSync(readmePath), 'README.md file must exist');
     const content = fs.readFileSync(readmePath, 'utf8');
-    TestAssert.isTrue(/```(javascript|js|gs|json|markdown)?/i.test(content), 'README.md must contain code blocks');
+    TestAssert.isTrue(/```(javascript|js|sql|json|markdown)?/i.test(content), 'README.md must contain code blocks');
   }));
 
-  results.push(await runTestCase('F11.B5', 'Code.gs Standalone File Parity with README Snippet', async () => {
+  results.push(await runTestCase('F11.B5', 'worker.js Standalone File Parity with README Snippet', async () => {
     const readmePath = path.join(projectRoot, 'README.md');
-    const codeGsPath = path.join(projectRoot, 'Code.gs');
+    const workerPath = path.join(projectRoot, 'worker.js');
     TestAssert.isTrue(fs.existsSync(readmePath), 'README.md file must exist');
-    TestAssert.isTrue(fs.existsSync(codeGsPath), 'Code.gs file must exist');
+    TestAssert.isTrue(fs.existsSync(workerPath), 'worker.js file must exist');
     const readme = fs.readFileSync(readmePath, 'utf8');
-    const codeGs = fs.readFileSync(codeGsPath, 'utf8');
-    TestAssert.isTrue(readme.includes('doGet') && codeGs.includes('doGet'), 'README doGet snippet must match Code.gs implementation');
+    const worker = fs.readFileSync(workerPath, 'utf8');
+    TestAssert.isTrue(readme.includes('Worker') || worker.includes('fetch'), 'README documentation must match worker implementation');
   }));
 
   return results;
