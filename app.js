@@ -755,14 +755,20 @@ const NetWorthManager = {
         let html = '<ul class="asset-items-list">';
         assets.forEach(a => {
           html += `
-            <li class="asset-item">
+            <li class="asset-item" data-id="${a.id}">
               <div class="asset-main">
-                <strong>${a.name}</strong>
-                <span class="asset-cat-tag">${a.category}</span>
+                <div class="asset-title-row">
+                  <strong>${a.name}</strong>
+                  <span class="asset-cat-tag">${a.category}</span>
+                </div>
+                ${a.note ? `<div class="asset-note-text">📝 ${a.note}</div>` : ''}
               </div>
               <div class="asset-val-box">
-                <span class="asset-val-text">${db.formatVND(a.value)}</span>
-                <button type="button" class="btn-delete-asset" data-delete-asset="${a.id}">&times;</button>
+                <span class="asset-val-text income-text">${db.formatVND(a.value)}</span>
+                <div class="asset-actions">
+                  <button type="button" class="btn-edit-asset icon-action-btn" data-edit-asset="${a.id}" title="Chỉnh sửa tài sản">✏️</button>
+                  <button type="button" class="btn-delete-asset icon-action-btn" data-delete-asset="${a.id}" title="Xóa tài sản">&times;</button>
+                </div>
               </div>
             </li>
           `;
@@ -782,14 +788,20 @@ const NetWorthManager = {
         let html = '<ul class="asset-items-list">';
         liabilities.forEach(l => {
           html += `
-            <li class="asset-item">
+            <li class="asset-item" data-id="${l.id}">
               <div class="asset-main">
-                <strong>${l.name}</strong>
-                <span class="asset-cat-tag">${l.category}</span>
+                <div class="asset-title-row">
+                  <strong>${l.name}</strong>
+                  <span class="asset-cat-tag">${l.category}</span>
+                </div>
+                ${l.note ? `<div class="asset-note-text">📝 ${l.note}</div>` : ''}
               </div>
               <div class="asset-val-box">
                 <span class="asset-val-text expense-text">${db.formatVND(l.remaining_debt)}</span>
-                <button type="button" class="btn-delete-liab" data-delete-liab="${l.id}">&times;</button>
+                <div class="asset-actions">
+                  <button type="button" class="btn-edit-liab icon-action-btn" data-edit-liab="${l.id}" title="Chỉnh sửa khoản nợ">✏️</button>
+                  <button type="button" class="btn-delete-liab icon-action-btn" data-delete-liab="${l.id}" title="Xóa khoản nợ">&times;</button>
+                </div>
               </div>
             </li>
           `;
@@ -813,7 +825,7 @@ const NetWorthManager = {
           const badgeClass = isLoan ? 'badge-income' : 'badge-expense';
 
           html += `
-            <div class="loan-card">
+            <div class="loan-card" data-id="${l.id}">
               <div class="loan-card-header">
                 <div>
                   <strong>${l.person_name}</strong>
@@ -826,13 +838,15 @@ const NetWorthManager = {
               <div class="loan-card-body">
                 <span>Còn lại: <strong class="${isLoan ? 'income-text' : 'expense-text'}">${db.formatVND(l.remaining_amount)}</strong> / ${db.formatVND(l.original_amount)}</span>
                 ${l.due_date ? `<span class="loan-due">Hạn: ${l.due_date}</span>` : ''}
+                ${l.note ? `<div class="loan-note-text">📝 ${l.note}</div>` : ''}
               </div>
-              ${l.status !== 'paid' ? `
-                <div class="loan-card-footer">
-                  <button type="button" class="btn btn-secondary btn-sm" data-repay-loan="${l.id}">💸 Trả gốc & lãi</button>
-                  <button type="button" class="btn-delete-loan" data-delete-loan="${l.id}">&times;</button>
+              <div class="loan-card-footer">
+                ${l.status !== 'paid' ? `<button type="button" class="btn btn-secondary btn-sm" data-repay-loan="${l.id}">💸 Trả gốc & lãi</button>` : ''}
+                <div class="loan-actions">
+                  <button type="button" class="btn-edit-loan icon-action-btn" data-edit-loan="${l.id}" title="Chỉnh sửa sổ vay">✏️</button>
+                  <button type="button" class="btn-delete-loan icon-action-btn" data-delete-loan="${l.id}" title="Xóa sổ vay">&times;</button>
                 </div>
-              ` : ''}
+              </div>
             </div>
           `;
         });
@@ -920,16 +934,31 @@ const NetWorthManager = {
     // Route hooks
     Router.on('networth', () => this.renderNetWorthView());
 
-    // Modal open buttons
+    // Modal open buttons (Reset inputs for new addition)
     document.getElementById('btn-open-add-asset')?.addEventListener('click', () => {
+      document.getElementById('form-asset')?.reset();
+      const idInput = document.getElementById('asset-id');
+      if (idInput) idInput.value = '';
+      const titleEl = document.getElementById('asset-modal-title');
+      if (titleEl) titleEl.textContent = 'Thêm / Sửa Tài Sản';
       document.getElementById('modal-asset')?.removeAttribute('hidden');
     });
 
     document.getElementById('btn-open-add-liab')?.addEventListener('click', () => {
+      document.getElementById('form-liability')?.reset();
+      const idInput = document.getElementById('liab-id');
+      if (idInput) idInput.value = '';
+      const titleEl = document.getElementById('liability-modal-title');
+      if (titleEl) titleEl.textContent = 'Thêm / Sửa Khoản Nợ Phải Trả';
       document.getElementById('modal-liability')?.removeAttribute('hidden');
     });
 
     document.getElementById('btn-open-add-loan')?.addEventListener('click', () => {
+      document.getElementById('form-loan')?.reset();
+      const idInput = document.getElementById('loan-id');
+      if (idInput) idInput.value = '';
+      const titleEl = document.getElementById('loan-modal-title');
+      if (titleEl) titleEl.textContent = 'Sổ Vay & Cho Vay';
       document.getElementById('modal-loan')?.removeAttribute('hidden');
     });
 
@@ -957,15 +986,16 @@ const NetWorthManager = {
       e.preventDefault();
       const db = window.DB;
       if (!db) return;
+      const id = document.getElementById('asset-id')?.value || undefined;
       const name = document.getElementById('asset-name')?.value;
       const category = document.getElementById('asset-category')?.value;
       const value = parseRawAmount(document.getElementById('asset-value')?.value);
       const note = document.getElementById('asset-note')?.value;
 
-      db.saveAsset({ name, category, value, note });
+      db.saveAsset({ id, name, category, value, note });
       document.getElementById('modal-asset')?.setAttribute('hidden', '');
       this.renderNetWorthView();
-      Toast.show('Đã lưu tài sản mới thành công', 'success');
+      Toast.show(id ? 'Đã cập nhật tài sản thành công' : 'Đã lưu tài sản mới thành công', 'success');
     });
 
     // Liability Form submit
@@ -973,15 +1003,16 @@ const NetWorthManager = {
       e.preventDefault();
       const db = window.DB;
       if (!db) return;
+      const id = document.getElementById('liab-id')?.value || undefined;
       const name = document.getElementById('liab-name')?.value;
       const category = document.getElementById('liab-category')?.value;
       const remaining_debt = parseRawAmount(document.getElementById('liab-remaining')?.value);
       const note = document.getElementById('liab-note')?.value;
 
-      db.saveLiability({ name, category, remaining_debt, note });
+      db.saveLiability({ id, name, category, remaining_debt, note });
       document.getElementById('modal-liability')?.setAttribute('hidden', '');
       this.renderNetWorthView();
-      Toast.show('Đã lưu khoản nợ thành công', 'success');
+      Toast.show(id ? 'Đã cập nhật khoản nợ thành công' : 'Đã lưu khoản nợ thành công', 'success');
     });
 
     // Loan Form submit
@@ -989,16 +1020,17 @@ const NetWorthManager = {
       e.preventDefault();
       const db = window.DB;
       if (!db) return;
+      const id = document.getElementById('loan-id')?.value || undefined;
       const type = document.querySelector('input[name="loan-type"]:checked')?.value || 'loan';
       const person_name = document.getElementById('loan-person')?.value;
       const original_amount = parseRawAmount(document.getElementById('loan-amount')?.value);
       const due_date = document.getElementById('loan-due-date')?.value;
       const note = document.getElementById('loan-note')?.value;
 
-      db.saveLoan({ type, person_name, original_amount, due_date, note });
+      db.saveLoan({ id, type, person_name, original_amount, due_date, note });
       document.getElementById('modal-loan')?.setAttribute('hidden', '');
       this.renderNetWorthView();
-      Toast.show('Đã lưu sổ vay mượn mới', 'success');
+      Toast.show(id ? 'Đã cập nhật hợp đồng vay mượn' : 'Đã lưu sổ vay mượn mới', 'success');
     });
 
     // Repay Loan Form submit
@@ -1036,10 +1068,81 @@ const NetWorthManager = {
       Toast.show('Đã lưu lịch thu chi định kỳ', 'success');
     });
 
-    // Delegation clicks for delete asset, delete liability, delete loan, repay loan, revert audit log
+    // Delegation clicks for edit & delete asset, liability, loan, repay loan, revert audit log
     document.addEventListener('click', (e) => {
       const db = window.DB;
       if (!db) return;
+
+      // EDIT ASSET
+      const editAssetBtn = e.target?.closest('[data-edit-asset]');
+      if (editAssetBtn) {
+        const id = editAssetBtn.getAttribute('data-edit-asset');
+        const assets = db.getAssets();
+        const target = assets.find(a => a.id === id);
+        if (target) {
+          document.getElementById('asset-id').value = target.id;
+          document.getElementById('asset-name').value = target.name;
+          document.getElementById('asset-category').value = target.category || 'Tài khoản ngân hàng';
+          const valInput = document.getElementById('asset-value');
+          if (valInput) {
+            valInput.value = formatVNDInput(target.value);
+            TransactionForm.handleAmountInput(valInput);
+          }
+          document.getElementById('asset-note').value = target.note || '';
+          const titleEl = document.getElementById('asset-modal-title');
+          if (titleEl) titleEl.textContent = '✏️ Chỉnh Sửa Tài Sản';
+          document.getElementById('modal-asset')?.removeAttribute('hidden');
+        }
+      }
+
+      // EDIT LIABILITY
+      const editLiabBtn = e.target?.closest('[data-edit-liab]');
+      if (editLiabBtn) {
+        const id = editLiabBtn.getAttribute('data-edit-liab');
+        const liabilities = db.getLiabilities();
+        const target = liabilities.find(l => l.id === id);
+        if (target) {
+          document.getElementById('liab-id').value = target.id;
+          document.getElementById('liab-name').value = target.name;
+          document.getElementById('liab-category').value = target.category || 'Thẻ tín dụng';
+          const valInput = document.getElementById('liab-remaining');
+          if (valInput) {
+            valInput.value = formatVNDInput(target.remaining_debt);
+            TransactionForm.handleAmountInput(valInput);
+          }
+          document.getElementById('liab-note').value = target.note || '';
+          const titleEl = document.getElementById('liability-modal-title');
+          if (titleEl) titleEl.textContent = '✏️ Chỉnh Sửa Khoản Nợ Phải Trả';
+          document.getElementById('modal-liability')?.removeAttribute('hidden');
+        }
+      }
+
+      // EDIT LOAN
+      const editLoanBtn = e.target?.closest('[data-edit-loan]');
+      if (editLoanBtn) {
+        const id = editLoanBtn.getAttribute('data-edit-loan');
+        const loans = db.getLoans();
+        const target = loans.find(l => l.id === id);
+        if (target) {
+          document.getElementById('loan-id').value = target.id;
+          if (target.type === 'loan') {
+            document.getElementById('loan-type-loan').checked = true;
+          } else {
+            document.getElementById('loan-type-debt').checked = true;
+          }
+          document.getElementById('loan-person').value = target.person_name;
+          const amtInput = document.getElementById('loan-amount');
+          if (amtInput) {
+            amtInput.value = formatVNDInput(target.original_amount);
+            TransactionForm.handleAmountInput(amtInput);
+          }
+          document.getElementById('loan-due-date').value = target.due_date || '';
+          document.getElementById('loan-note').value = target.note || '';
+          const titleEl = document.getElementById('loan-modal-title');
+          if (titleEl) titleEl.textContent = '✏️ Chỉnh Sửa Sổ Vay & Cho Vay';
+          document.getElementById('modal-loan')?.removeAttribute('hidden');
+        }
+      }
 
       const delAsset = e.target?.closest('[data-delete-asset]');
       if (delAsset) {

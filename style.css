@@ -1697,9 +1697,14 @@ optgroup option {
    -------------------------------------------------------------------------- */
 @media (max-width: 640px) {
   /* Strict container overflow prevention for mobile */
-  .card, .form-card, .history-card, .settings-card, .filter-controls {
+  .form-card, .history-card, .settings-card, .filter-controls {
     max-width: 100% !important;
     overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+  .card {
+    max-width: 100% !important;
+    overflow: visible !important;
     box-sizing: border-box !important;
   }
 
@@ -2347,11 +2352,32 @@ optgroup option {
 .asset-main {
   display: flex;
   flex-direction: column;
+  gap: 0.2rem;
+}
+
+.asset-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .asset-cat-tag {
   font-size: 0.7rem;
   color: var(--color-text-secondary);
+  background: var(--color-surface);
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.asset-note-text,
+.loan-note-text {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.15rem;
+  font-style: italic;
+  word-break: break-word;
 }
 
 .asset-val-box {
@@ -2365,6 +2391,35 @@ optgroup option {
   font-size: 0.9rem;
 }
 
+.asset-actions,
+.loan-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.icon-action-btn {
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s ease, transform 0.1s ease;
+  line-height: 1;
+}
+
+.icon-action-btn:hover {
+  background: var(--color-bg-secondary);
+  transform: scale(1.1);
+}
+
+.btn-edit-asset,
+.btn-edit-liab,
+.btn-edit-loan {
+  color: var(--color-primary);
+}
+
 .btn-delete-asset,
 .btn-delete-liab,
 .btn-delete-loan,
@@ -2372,9 +2427,9 @@ optgroup option {
   background: none;
   border: none;
   color: var(--expense-color);
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   cursor: pointer;
-  padding: 0 0.2rem;
+  padding: 0.2rem 0.35rem;
   line-height: 1;
 }
 
