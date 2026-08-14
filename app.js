@@ -1255,7 +1255,7 @@ const NetWorthManager = {
           document.getElementById('wallet-icon').value = wallet.icon || '💵';
           const balInput = document.getElementById('wallet-initial-balance');
           if (balInput) {
-            balInput.value = formatVNDInput(wallet.balance || 0);
+            balInput.value = formatVNDInput(wallet.initial_balance || 0);
             TransactionForm.handleAmountInput(balInput);
           }
           document.getElementById('wallet-color').value = wallet.color || '#10b981';
