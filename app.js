@@ -405,7 +405,7 @@ const TransactionForm = {
     if (categories.length) selectEl.value = categories[0].name;
   },
 
-  populateWallets() {
+  populateWallets(forceDefault = false) {
     const db = window.DB;
     if (!db?.getWallets) return;
     const wallets = db.getWallets();
@@ -431,16 +431,27 @@ const TransactionForm = {
         selectEl.appendChild(opt);
       }
 
+      let defaultWalletId = null;
+
       wallets.forEach(w => {
         const opt = document.createElement('option');
         opt.value = w.id;
         const fmtBal = db.formatVND ? db.formatVND(w.balance) : `${w.balance} ₫`;
         opt.textContent = `${w.icon ? w.icon + ' ' : ''}${w.name} (${fmtBal})`;
-        if (w.is_default && !isFilter && !currentValue) opt.selected = true;
+        
+        if (w.is_default) {
+          defaultWalletId = w.id;
+          if (!isFilter && (!currentValue || forceDefault)) {
+            opt.selected = true;
+          }
+        }
+        
         selectEl.appendChild(opt);
       });
 
-      if (currentValue && selectEl.querySelector(`option[value="${currentValue}"]`)) {
+      if (forceDefault && defaultWalletId && !isFilter) {
+        selectEl.value = defaultWalletId;
+      } else if (currentValue && selectEl.querySelector(`option[value="${currentValue}"]`)) {
         selectEl.value = currentValue;
       }
     });
@@ -457,7 +468,7 @@ const TransactionForm = {
     const dateInput = document.getElementById('input-date');
     if (dateInput) dateInput.value = this._todayString();
     this.populateCategories('expense');
-    this.populateWallets();
+    this.populateWallets(true);
   },
 
   handleAmountInput(e) {
@@ -1041,7 +1052,7 @@ const NetWorthManager = {
 
     document.getElementById('btn-open-transfer')?.addEventListener('click', () => {
       document.getElementById('form-transfer')?.reset();
-      TransactionForm.populateWallets();
+      TransactionForm.populateWallets(true);
       const amtInput = document.getElementById('transfer-amount');
       if (amtInput) TransactionForm.handleAmountInput(amtInput);
       const dateInput = document.getElementById('transfer-date');
@@ -1110,7 +1121,7 @@ const NetWorthManager = {
 
       db.saveWallet({ id, name, type, icon, initial_balance, balance: initial_balance, color, is_default });
       document.getElementById('modal-wallet')?.setAttribute('hidden', '');
-      TransactionForm.populateWallets();
+      TransactionForm.populateWallets(true);
       this.renderNetWorthView();
       Toast.show(id ? 'Đã cập nhật thông tin ví' : 'Đã tạo ví mới thành công', 'success');
     });
@@ -1436,7 +1447,7 @@ const App = {
       Router.init();
       registerServiceWorker();
       TransactionForm.init();
-      TransactionForm.populateWallets();
+      TransactionForm.populateWallets(true);
 
       getModule('HistoryUI', 'HistoryManager')?.initEventListeners?.();
       getModule('ChartsUI', 'Charts')?.initEventListeners?.();
