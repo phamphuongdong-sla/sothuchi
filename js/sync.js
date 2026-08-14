@@ -188,7 +188,7 @@
           return {
             success: false,
             error: isAuthErr
-              ? 'Google Sheet chưa được cấp quyền. Mở Apps Script > chọn doGet > bấm ▶ Chạy để cấp quyền!'
+              ? 'Không thể kết nối SQLite Cloud. Vui lòng kiểm tra lại URL Endpoint!'
               : err.message
           };
         }
@@ -341,7 +341,7 @@
 
       el.className = `sync-status status-${state}`;
       const titles = {
-        syncing: '🔄 Đang đồng bộ với Google Sheets...',
+        syncing: '🔄 Đang đồng bộ với SQLite Cloud...',
         success: '✅ Đã đồng bộ thành công',
         error: '⚠️ Lỗi đồng bộ',
         offline: '📡 Ngoại tuyến',
@@ -390,7 +390,7 @@
           const btnSync = e.target.closest('#btn-manual-sync');
           if (btnSync) {
             e.preventDefault();
-            window.Toast?.show('🔄 Đang đồng bộ với Google Sheets...', 'info', 2000);
+            window.Toast?.show('🔄 Đang đồng bộ với SQLite Cloud...', 'info', 2000);
             btnSync.disabled = true;
             const orig = btnSync.textContent;
             btnSync.textContent = '⏳ Đang đồng bộ...';
@@ -420,7 +420,7 @@
             try {
               const ok = await this.testConnection(this.getSettings().gasUrl);
               window.Toast?.show(
-                ok ? '✅ Kết nối Google Sheets thành công!' : '❌ Kết nối thất bại.',
+                ok ? '✅ Kết nối SQLite Cloud thành công!' : '❌ Kết nối thất bại.',
                 ok ? 'success' : 'error',
                 3000
               );
