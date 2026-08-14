@@ -1075,7 +1075,11 @@
           <div class="filter-row mb-2">
             <div class="form-group flex-1">
               <label for="wallet-initial-balance" class="form-label-sm">Số dư ban đầu (VND)</label>
-              <input type="number" id="wallet-initial-balance" class="form-control" placeholder="0">
+              <div class="input-wrapper amount-wrapper">
+                <input type="text" id="wallet-initial-balance" class="form-control amount-input" placeholder="0" inputmode="numeric" autocomplete="off">
+                <span class="currency-suffix">₫</span>
+              </div>
+              <div id="wallet-initial-balance-words" class="amount-in-words" hidden></div>
             </div>
             <div class="form-group flex-1">
               <label for="wallet-color" class="form-label-sm">Màu chủ đạo</label>

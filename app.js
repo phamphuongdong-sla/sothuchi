@@ -1016,6 +1016,8 @@ const NetWorthManager = {
       document.getElementById('form-wallet')?.reset();
       const idInput = document.getElementById('wallet-id');
       if (idInput) idInput.value = '';
+      const balInput = document.getElementById('wallet-initial-balance');
+      if (balInput) TransactionForm.handleAmountInput(balInput);
       const titleEl = document.getElementById('wallet-modal-title');
       if (titleEl) titleEl.textContent = '💼 Thêm Ví Mới';
       document.getElementById('modal-wallet')?.removeAttribute('hidden');
@@ -1024,6 +1026,8 @@ const NetWorthManager = {
     document.getElementById('btn-open-transfer')?.addEventListener('click', () => {
       document.getElementById('form-transfer')?.reset();
       TransactionForm.populateWallets();
+      const amtInput = document.getElementById('transfer-amount');
+      if (amtInput) TransactionForm.handleAmountInput(amtInput);
       const dateInput = document.getElementById('transfer-date');
       if (dateInput) dateInput.value = TransactionForm._todayString();
       document.getElementById('modal-transfer')?.removeAttribute('hidden');
@@ -1222,7 +1226,11 @@ const NetWorthManager = {
           document.getElementById('wallet-name').value = wallet.name;
           document.getElementById('wallet-type').value = wallet.type || 'cash';
           document.getElementById('wallet-icon').value = wallet.icon || '💵';
-          document.getElementById('wallet-initial-balance').value = wallet.balance || 0;
+          const balInput = document.getElementById('wallet-initial-balance');
+          if (balInput) {
+            balInput.value = formatVNDInput(wallet.balance || 0);
+            TransactionForm.handleAmountInput(balInput);
+          }
           document.getElementById('wallet-color').value = wallet.color || '#10b981';
           document.getElementById('wallet-is-default').checked = !!wallet.is_default;
           const titleEl = document.getElementById('wallet-modal-title');
