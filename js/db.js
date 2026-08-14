@@ -19,10 +19,10 @@
   };
 
   const DEFAULT_WALLETS = [
-    { id: 'wallet_cash', name: 'Ví tiền mặt', type: 'cash', icon: '💵', color: '#10b981', balance: 0, is_default: 1, is_hidden: 0 },
-    { id: 'wallet_bank', name: 'Tài khoản Ngân hàng', type: 'bank', icon: '🏦', color: '#3b82f6', balance: 0, is_default: 0, is_hidden: 0 },
-    { id: 'wallet_momo', name: 'Ví MoMo / ZaloPay', type: 'ewallet', icon: '📱', color: '#ec4899', balance: 0, is_default: 0, is_hidden: 0 },
-    { id: 'wallet_credit', name: 'Thẻ tín dụng', type: 'credit', icon: '💳', color: '#f59e0b', balance: 0, is_default: 0, is_hidden: 0 }
+    { id: 'wallet_cash', name: 'Ví tiền mặt', type: 'cash', icon: '💵', color: '#10b981', initial_balance: 0, balance: 0, is_default: 1, is_hidden: 0 },
+    { id: 'wallet_bank', name: 'Tài khoản Ngân hàng', type: 'bank', icon: '🏦', color: '#3b82f6', initial_balance: 0, balance: 0, is_default: 0, is_hidden: 0 },
+    { id: 'wallet_momo', name: 'Ví MoMo / ZaloPay', type: 'ewallet', icon: '📱', color: '#ec4899', initial_balance: 0, balance: 0, is_default: 0, is_hidden: 0 },
+    { id: 'wallet_credit', name: 'Thẻ tín dụng', type: 'credit', icon: '💳', color: '#f59e0b', initial_balance: 0, balance: 0, is_default: 0, is_hidden: 0 }
   ];
 
   function generateId(prefix) {
@@ -296,13 +296,16 @@
       const wallets = this.getWallets(true);
       const existingIdx = data.id ? wallets.findIndex(w => w.id === data.id) : -1;
       const now = new Date().toISOString();
+      const initialBalance = Number(data.initial_balance ?? data.balance ?? 0);
+
       const newWallet = {
         id: data.id || generateId('wallet'),
         name: String(data.name).trim(),
         type: data.type || 'cash',
         icon: data.icon || '💵',
         color: data.color || '#10b981',
-        balance: Number(data.balance) || 0,
+        initial_balance: initialBalance,
+        balance: initialBalance,
         is_default: data.is_default ? 1 : 0,
         is_hidden: data.is_hidden ? 1 : 0,
         updated_at: now

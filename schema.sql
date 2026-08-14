@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS wallets (
   type TEXT DEFAULT 'cash',            -- 'cash', 'bank', 'ewallet', 'credit'
   icon TEXT DEFAULT '💵',
   color TEXT DEFAULT '#10b981',
+  initial_balance REAL DEFAULT 0,
   balance REAL DEFAULT 0,
   is_default INTEGER DEFAULT 0,        -- 1: Ví mặc định
   is_hidden INTEGER DEFAULT 0          -- 0: Hiện, 1: Ẩn

@@ -133,13 +133,14 @@ export default {
           if (w.name) {
             statements.push(
               db.prepare(`
-                INSERT INTO wallets (id, name, type, icon, color, balance, is_default, is_hidden)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO wallets (id, name, type, icon, color, initial_balance, balance, is_default, is_hidden)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                   name = excluded.name,
                   type = excluded.type,
                   icon = excluded.icon,
                   color = excluded.color,
+                  initial_balance = excluded.initial_balance,
                   balance = excluded.balance,
                   is_default = excluded.is_default,
                   is_hidden = excluded.is_hidden
@@ -149,6 +150,7 @@ export default {
                 String(w.type || 'cash'),
                 String(w.icon || '💵'),
                 String(w.color || '#10b981'),
+                Number(w.initial_balance || w.balance) || 0,
                 Number(w.balance) || 0,
                 w.is_default ? 1 : 0,
                 w.is_hidden ? 1 : 0
