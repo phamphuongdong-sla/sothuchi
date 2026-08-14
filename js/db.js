@@ -295,7 +295,7 @@
 
     getWallet(id) {
       const wallets = this.getWallets(true, true);
-      return wallets.find(w => w.id === id) || wallets[0] || null;
+      return wallets.find(w => String(w.id) === String(id)) || wallets[0] || null;
     }
 
     saveWallets(wallets) {
@@ -305,7 +305,7 @@
     saveWallet(data) {
       if (!data || !data.name) throw new Error('Tên ví không được để trống');
       const wallets = this.getWallets(true, true);
-      const existingIdx = data.id ? wallets.findIndex(w => w.id === data.id) : -1;
+      const existingIdx = data.id ? wallets.findIndex(w => String(w.id) === String(data.id)) : -1;
       const existing = existingIdx !== -1 ? wallets[existingIdx] : null;
       const now = new Date().toISOString();
 
@@ -355,7 +355,7 @@
       const activeWallets = wallets.filter(w => !w.is_deleted && w.sync_status !== 'pending_delete');
       if (activeWallets.length <= 1) throw new Error('Cần giữ lại ít nhất 1 ví trong hệ thống');
 
-      const idx = wallets.findIndex(w => w.id === id);
+      const idx = wallets.findIndex(w => String(w.id) === String(id));
       const target = idx !== -1 ? wallets[idx] : null;
       if (idx !== -1) {
         if (target.sync_status === 'synced' || target.updated_at) {
