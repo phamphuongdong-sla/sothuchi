@@ -535,18 +535,47 @@
           }
         };
 
+        const pullOnly = () => {
+          const s = this.getSettings();
+          if (s.autoSync && s.gasUrl && !this.isSyncing && navigator.onLine !== false) {
+            this.pullSync().catch(() => {});
+          }
+        };
+
         window.addEventListener('online', () => { this._updateStatus('idle'); autoSync(); });
         window.addEventListener('offline', () => this._updateStatus('offline'));
-        window.addEventListener('focus', autoSync);
 
+        // Pull immediately when window gets focus (user switches back from another app/tab)
+        window.addEventListener('focus', pullOnly);
+
+        // Pull immediately when tab becomes visible (mobile app switch, screen unlock)
         document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') autoSync();
+          if (document.visibilityState === 'visible') pullOnly();
         });
 
-        // Periodic sync every 20 seconds (HTTP only)
+        // Periodic sync every 5 seconds for near real-time cross-device updates
         if (window.location?.protocol?.startsWith('http')) {
-          setInterval(autoSync, 20000);
+          setInterval(pullOnly, 5000);
+          // Full push+pull every 30 seconds to ensure local changes propagate
+          setInterval(autoSync, 30000);
         }
+
+        // BroadcastChannel: instant sync between multiple tabs in same browser
+        try {
+          const bc = new BroadcastChannel('stc_sync_channel');
+          bc.addEventListener('message', (ev) => {
+            if (ev.data === 'pull_now') pullOnly();
+          });
+          // After every successful push, notify other tabs to pull immediately
+          const origPushSync = this.pushSync.bind(this);
+          this.pushSync = async (...args) => {
+            const result = await origPushSync(...args);
+            if (result?.success) {
+              try { bc.postMessage('pull_now'); } catch (_) {}
+            }
+            return result;
+          };
+        } catch (_) {}
 
         // Manual sync & test connection buttons
         document.addEventListener('click', async e => {
