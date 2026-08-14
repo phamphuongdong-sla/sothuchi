@@ -275,7 +275,7 @@
     }
 
     // Wallets Management
-    getWallets(includeHidden = false) {
+    getWallets(includeHidden = false, includeDeleted = false) {
       const raw = this._getItem(KEYS.WALLET);
       let wallets = [];
       if (raw) {
@@ -289,11 +289,12 @@
         this.saveWallets(wallets);
       }
       this.recalculateWalletBalances(wallets);
-      return includeHidden ? wallets : wallets.filter(w => !w.is_hidden);
+      let result = includeDeleted ? wallets : wallets.filter(w => !w.is_deleted && w.sync_status !== 'pending_delete');
+      return includeHidden ? result : result.filter(w => !w.is_hidden);
     }
 
     getWallet(id) {
-      const wallets = this.getWallets(true);
+      const wallets = this.getWallets(true, true);
       return wallets.find(w => w.id === id) || wallets[0] || null;
     }
 
@@ -303,7 +304,7 @@
 
     saveWallet(data) {
       if (!data || !data.name) throw new Error('Tên ví không được để trống');
-      const wallets = this.getWallets(true);
+      const wallets = this.getWallets(true, true);
       const existingIdx = data.id ? wallets.findIndex(w => w.id === data.id) : -1;
       const existing = existingIdx !== -1 ? wallets[existingIdx] : null;
       const now = new Date().toISOString();
@@ -327,7 +328,8 @@
         balance: initialBalance,
         is_default: data.is_default !== undefined ? (data.is_default ? 1 : 0) : (existing ? existing.is_default : 0),
         is_hidden: data.is_hidden !== undefined ? (data.is_hidden ? 1 : 0) : (existing ? existing.is_hidden : 0),
-        updated_at: now
+        updated_at: now,
+        sync_status: 'pending_update'
       };
 
       if (newWallet.is_default) {
@@ -342,17 +344,40 @@
       this.recalculateWalletBalances(wallets);
       this.saveWallets(wallets);
       this.logAuditEvent(existingIdx !== -1 ? 'update' : 'add', 'wallet', newWallet.id, existing, newWallet);
+      if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
+        window.SyncEngine.pushSync().catch(() => {});
+      }
       return wallets.find(w => w.id === newWallet.id) || newWallet;
     }
 
     deleteWallet(id) {
-      let wallets = this.getWallets(true);
-      if (wallets.length <= 1) throw new Error('Cần giữ lại ít nhất 1 ví trong hệ thống');
-      const target = wallets.find(w => w.id === id);
-      wallets = wallets.filter(w => w.id !== id);
-      if (!wallets.some(w => w.is_default)) wallets[0].is_default = 1;
+      let wallets = this.getWallets(true, true);
+      const activeWallets = wallets.filter(w => !w.is_deleted && w.sync_status !== 'pending_delete');
+      if (activeWallets.length <= 1) throw new Error('Cần giữ lại ít nhất 1 ví trong hệ thống');
+
+      const idx = wallets.findIndex(w => w.id === id);
+      const target = idx !== -1 ? wallets[idx] : null;
+      if (idx !== -1) {
+        if (target.sync_status === 'synced' || target.updated_at) {
+          wallets[idx] = {
+            ...target,
+            is_deleted: 1,
+            sync_status: 'pending_delete',
+            updated_at: new Date().toISOString()
+          };
+        } else {
+          wallets.splice(idx, 1);
+        }
+      }
+      if (!wallets.some(w => w.is_default && !w.is_deleted && w.sync_status !== 'pending_delete')) {
+        const active = wallets.find(w => !w.is_deleted && w.sync_status !== 'pending_delete');
+        if (active) active.is_default = 1;
+      }
       this.saveWallets(wallets);
       this.logAuditEvent('delete', 'wallet', id, target, null);
+      if (typeof window !== 'undefined' && window.SyncEngine?.pushSync) {
+        window.SyncEngine.pushSync().catch(() => {});
+      }
       return true;
     }
 

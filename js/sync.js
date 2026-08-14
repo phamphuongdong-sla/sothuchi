@@ -132,7 +132,7 @@
       const pending = all.filter(t => t.sync_status && t.sync_status !== 'synced');
       const deduped = Array.from(new Map(pending.map(t => [t.id, t])).values());
 
-      const wallets = db.getWallets ? db.getWallets(true) : [];
+      const wallets = db.getWallets ? db.getWallets(true, true) : [];
       const assets = db.getAssets ? db.getAssets(true) : [];
       const liabilities = db.getLiabilities ? db.getLiabilities(true) : [];
       const loans = db.getLoans ? db.getLoans(true) : [];
@@ -214,6 +214,17 @@
           })
           .filter(Boolean);
         db.saveTransactions(updatedTxs, { skipAutoPush: true });
+
+        // Wallets
+        if (db.getWallets) {
+          const updatedWallets = db.getWallets(true, true)
+            .map(w => {
+              if (syncedIds.length > 0 && !syncedIds.includes(w.id)) return w;
+              return (w.sync_status === 'pending_delete' || w.is_deleted) ? null : { ...w, sync_status: 'synced' };
+            })
+            .filter(Boolean);
+          db.saveWallets(updatedWallets);
+        }
 
         // Assets
         if (db.getAssets) {
@@ -351,11 +362,21 @@
           catMgr?.mergeRemoteCategories?.(json.categories);
         }
 
-        // Merge remote wallets if available
-        if (Array.isArray(json.wallets) && json.wallets.length > 0 && db.getWallets) {
-          const existingWallets = db.getWallets(true);
+        // Merge & purge remote wallets if available
+        if (Array.isArray(json.wallets) && db.getWallets) {
+          const existingWallets = db.getWallets(true, true);
           const walletMap = new Map(existingWallets.map(w => [w.id, w]));
-          json.wallets.forEach(w => walletMap.set(w.id, w));
+          const remoteIds = new Set(json.wallets.map(w => String(w.id)));
+
+          existingWallets.forEach(local => {
+            if (local.sync_status === 'pending_delete') {
+              if (!remoteIds.has(String(local.id))) walletMap.delete(local.id);
+            } else if (local.sync_status === 'synced' && !remoteIds.has(String(local.id))) {
+              walletMap.delete(local.id);
+            }
+          });
+
+          json.wallets.forEach(w => walletMap.set(w.id, { ...w, sync_status: 'synced' }));
           db.saveWallets(Array.from(walletMap.values()));
         }
 
