@@ -55,7 +55,7 @@
      * Load settings from LocalStorage.
      */
     getSettings() {
-      const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbzI9y7gVMLLob2lNltvGyzH5_ZA-XEav5MC-037FI7JzuWS38iQ6dTzitphHBkhC5HiQQ/exec';
+      const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbwWdURv3pdrXaYwMMTg1SzTjmCJQ9bjmW00A7tl_vkiwcTQObK_iHfISwyqWIQNSyuvjg/exec';
       try {
         const s = global.localStorage;
         if (s) {
