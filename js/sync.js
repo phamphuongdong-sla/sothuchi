@@ -218,7 +218,7 @@
     }
 
     /**
-     * Pull remote transactions, categories, assets, liabilities, loans from GAS backend and merge using LWW.
+     * Pull remote transactions, categories, assets, liabilities, loans from SQLite backend and merge using LWW.
      */
     async pullSync() {
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -250,29 +250,43 @@
         const remoteTxs = json.transactions;
         const localTxs = db.getTransactions({ includeDeleted: true });
         const localMap = new Map(localTxs.map(t => [t.id, t]));
-        const remoteIds = new Set(remoteTxs.map(r => String(r.id)));
 
-        // Remove local synced/pending_delete items deleted on server
-        localTxs.forEach(local => {
-          if ((local.sync_status === 'synced' || local.sync_status === 'pending_delete') &&
-              !remoteIds.has(String(local.id))) {
-            localMap.delete(local.id);
-          }
-        });
-
-        // Merge with LWW
-        remoteTxs.forEach(remote => {
-          const local = localMap.get(remote.id);
-          if (!local) {
-            localMap.set(remote.id, { ...remote, sync_status: 'synced' });
-          } else {
-            const remoteTime = new Date(remote.updated_at || 0).getTime();
-            const localTime = new Date(local.updated_at || 0).getTime();
-            if (remoteTime > localTime || (remoteTime === localTime && local.sync_status === 'synced')) {
-              localMap.set(remote.id, { ...remote, sync_status: 'synced' });
+        if (remoteTxs.length > 0) {
+          const remoteIds = new Set(remoteTxs.map(r => String(r.id)));
+          
+          localTxs.forEach(local => {
+            if (local.sync_status === 'pending_delete') {
+              if (!remoteIds.has(String(local.id))) {
+                localMap.delete(local.id); // Deletion confirmed
+              }
+            } else if (local.sync_status === 'synced' && !remoteIds.has(String(local.id))) {
+              // Local transaction was not found on remote server -> Mark as pending_add to upload!
+              localMap.set(local.id, { ...local, sync_status: 'pending_add' });
             }
-          }
-        });
+          });
+
+          // Merge remote transactions using Last-Write-Wins (LWW)
+          remoteTxs.forEach(remote => {
+            const local = localMap.get(remote.id);
+            if (!local) {
+              localMap.set(remote.id, { ...remote, sync_status: 'synced' });
+            } else {
+              const remoteTime = new Date(remote.updated_at || 0).getTime();
+              const localTime = new Date(local.updated_at || 0).getTime();
+              if (remoteTime > localTime || (remoteTime === localTime && local.sync_status === 'synced')) {
+                localMap.set(remote.id, { ...remote, sync_status: 'synced' });
+              }
+            }
+          });
+        } else if (localTxs.length > 0) {
+          // Server returned 0 transactions, but local has data -> Keep local & push to server!
+          localTxs.forEach(local => {
+            if (local.sync_status !== 'pending_delete') {
+              localMap.set(local.id, { ...local, sync_status: 'pending_add' });
+            }
+          });
+          setTimeout(() => this.pushSync().catch(() => {}), 100);
+        }
 
         const merged = Array.from(localMap.values());
         db.saveTransactions(merged, { skipAutoPush: true });
@@ -292,21 +306,21 @@
         // Merge remote assets, liabilities, loans if available
         if (Array.isArray(json.assets) && json.assets.length > 0 && db.getAssets) {
           const existingAssets = db.getAssets();
-          if (existingAssets.length === 0) {
-            json.assets.forEach(a => db.saveAsset(a));
-          }
+          const assetMap = new Map(existingAssets.map(a => [a.id, a]));
+          json.assets.forEach(a => assetMap.set(a.id, a));
+          db._setItem('stc_assets', JSON.stringify(Array.from(assetMap.values())));
         }
         if (Array.isArray(json.liabilities) && json.liabilities.length > 0 && db.getLiabilities) {
           const existingLiab = db.getLiabilities();
-          if (existingLiab.length === 0) {
-            json.liabilities.forEach(l => db.saveLiability(l));
-          }
+          const liabMap = new Map(existingLiab.map(l => [l.id, l]));
+          json.liabilities.forEach(l => liabMap.set(l.id, l));
+          db._setItem('stc_liabilities', JSON.stringify(Array.from(liabMap.values())));
         }
         if (Array.isArray(json.loans) && json.loans.length > 0 && db.getLoans) {
           const existingLoans = db.getLoans();
-          if (existingLoans.length === 0) {
-            json.loans.forEach(l => db.saveLoan(l));
-          }
+          const loanMap = new Map(existingLoans.map(l => [l.id, l]));
+          json.loans.forEach(l => loanMap.set(l.id, l));
+          db._setItem('stc_loans', JSON.stringify(Array.from(loanMap.values())));
         }
 
         this.isSyncing = false;
