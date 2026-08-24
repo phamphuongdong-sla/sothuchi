@@ -374,6 +374,15 @@ const TransactionForm = {
       categories = (window.DB?.getCategories(false) || []).filter(c => c.type === type);
     }
 
+    const stateKey = JSON.stringify(categories.map(c => c.id + c.name + c.icon + c.group)) + '_' + forceDefault;
+    if (selectEl.dataset.renderState === stateKey) {
+      if (forceDefault && categories.length) {
+        selectEl.value = categories[0].name;
+      }
+      return;
+    }
+    selectEl.dataset.renderState = stateKey;
+
     selectEl.innerHTML = '<option value="" disabled selected>-- Chọn hạng mục --</option>';
 
     if (!categories.length) {
@@ -424,10 +433,21 @@ const TransactionForm = {
       document.getElementById('transfer-to-wallet')
     ];
 
+    const stateKey = JSON.stringify(wallets.map(w => w.id + w.name + w.icon + w.balance + w.is_default)) + '_' + forceDefault;
+
     targets.forEach(selectEl => {
       if (!selectEl) return;
       const isFilter = selectEl.id === 'filter-wallet' || selectEl.id === 'filter-report-wallet';
       const currentValue = selectEl.value;
+
+      if (selectEl.dataset.renderState === stateKey) {
+        if (forceDefault && !isFilter) {
+          const def = wallets.find(w => w.is_default);
+          if (def) selectEl.value = def.id;
+        }
+        return;
+      }
+      selectEl.dataset.renderState = stateKey;
 
       selectEl.innerHTML = '';
       if (isFilter) {

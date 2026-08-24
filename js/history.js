@@ -197,7 +197,6 @@
       if (!selectEl) return;
 
       const savedVal = this.currentFilters.category || 'all';
-      selectEl.innerHTML = '<option value="all">Tất cả hạng mục</option>';
 
       const mgr = getCatMgr();
       let categories = [];
@@ -209,6 +208,15 @@
           categories = db.getCategories(true);
         }
       }
+
+      const stateKey = JSON.stringify(categories.map(c => c.id + c.name + c.icon + c.group + c.isHidden + c.is_hidden));
+      if (selectEl.dataset.renderState === stateKey) {
+        selectEl.value = savedVal;
+        return;
+      }
+      selectEl.dataset.renderState = stateKey;
+
+      selectEl.innerHTML = '<option value="all">Tất cả hạng mục</option>';
 
       // Group by group name
       const groups = new Map();
