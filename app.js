@@ -374,7 +374,7 @@ const TransactionForm = {
       categories = (window.DB?.getCategories(false) || []).filter(c => c.type === type);
     }
 
-    const stateKey = JSON.stringify(categories.map(c => c.id + c.name + c.icon + c.group)) + '_' + forceDefault;
+    const stateKey = JSON.stringify(categories.map(c => c.id + c.name + c.icon + c.group));
     if (selectEl.dataset.renderState === stateKey) {
       if (forceDefault && categories.length) {
         selectEl.value = categories[0].name;
@@ -433,7 +433,7 @@ const TransactionForm = {
       document.getElementById('transfer-to-wallet')
     ];
 
-    const stateKey = JSON.stringify(wallets.map(w => w.id + w.name + w.icon + w.balance + w.is_default)) + '_' + forceDefault;
+    const stateKey = JSON.stringify(wallets.map(w => w.id + w.name + w.icon + w.balance + w.is_default));
 
     targets.forEach(selectEl => {
       if (!selectEl) return;
@@ -680,6 +680,10 @@ const CategoryTreeManager = {
 
       html += `</div></div>`;
     });
+
+    const stateKey = JSON.stringify(groups.map(g => g.id + g.name)) + '_' + JSON.stringify(categories.map(c => c.id + c.name + c.isHidden + c.is_hidden + c.group + c.groupId));
+    if (container.dataset.renderState === stateKey) return;
+    container.dataset.renderState = stateKey;
 
     container.innerHTML = html;
   },
