@@ -43,8 +43,8 @@
 |---|------|-------|-------------|--------|
 | M1 | Backend, Cloudflare D1 & Sync Engine | `worker.js`, `js/sync.js`, `schema.sql`, `sw.js` (F2.1–F2.6) | none | DONE |
 | M2 | Storage Integrity & Accounting Logic | `js/db.js`, `js/charts.js`, `js/history.js` (F1.1–F1.7, F3.1–F3.2) | none | DONE |
-| M3 | UI/UX, Mobile Experience & Modals | `index.html`, `app.js`, `style.css` (F4.1–F4.5) | none | IN_PROGRESS |
-| M4 | E2E Testing Suite, Audit & Deploy | Test suites (Tiers 1-5), Cloudflare & Git deploy (F5.1–F5.3) | M1, M2, M3 | PLANNED |
+| M3 | UI/UX, Mobile Experience & Modals | `index.html`, `app.js`, `style.css` (F4.1–F4.5) | none | DONE |
+| M4 | E2E Testing Suite, Audit & Deploy | Test suites (Tiers 1-5), Cloudflare & Git deploy (F5.1–F5.3) | M1, M2, M3 | DONE |
 
 ## Interface Contracts
 ### `worker.js` ↔ `js/sync.js`

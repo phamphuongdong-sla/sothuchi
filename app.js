@@ -358,9 +358,11 @@ const TransactionForm = {
     return document.querySelector('input[name="tx-type"]:checked')?.value || 'expense';
   },
 
-  populateCategories(type) {
+  populateCategories(type, forceDefault = false) {
     const selectEl = document.getElementById('input-category');
     if (!selectEl) return;
+
+    const currentValue = selectEl.value;
 
     type = type || this.getCurrentType();
 
@@ -402,7 +404,11 @@ const TransactionForm = {
       selectEl.appendChild(optgroup);
     });
 
-    if (categories.length) selectEl.value = categories[0].name;
+    if (!forceDefault && currentValue && selectEl.querySelector(`option[value="${currentValue}"]`)) {
+      selectEl.value = currentValue;
+    } else if (categories.length) {
+      selectEl.value = categories[0].name;
+    }
   },
 
   populateWallets(forceDefault = false) {
@@ -467,7 +473,7 @@ const TransactionForm = {
     if (expenseRadio) expenseRadio.checked = true;
     const dateInput = document.getElementById('input-date');
     if (dateInput) dateInput.value = this._todayString();
-    this.populateCategories('expense');
+    this.populateCategories('expense', true);
     this.populateWallets(true);
   },
 
