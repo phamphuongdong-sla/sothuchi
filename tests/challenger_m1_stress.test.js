@@ -685,7 +685,7 @@ async function stressTest(name, fn) {
     const { simulateFetch } = createSWEnvironment();
 
     // 1. Cloudflare worker backend GET endpoint
-    const res1 = await simulateFetch('https://sothuchi-sqlite-backend.mrdong-sothuchi.workers.dev/api/fetchAll');
+    const res1 = await simulateFetch('https://sothuchi-sqlite-backend.phamphuongdong.workers.dev/api/fetchAll');
     assert.strictEqual(res1.bypassed, true, 'Workers.dev URL must bypass SW cache');
 
     // 2. Relative or local /api/ endpoint
@@ -693,7 +693,7 @@ async function stressTest(name, fn) {
     assert.strictEqual(res2.bypassed, true, '/api/ pathname must bypass SW cache');
 
     // 3. POST sync requests
-    const res3 = await simulateFetch('https://sothuchi-sqlite-backend.mrdong-sothuchi.workers.dev', { method: 'POST' });
+    const res3 = await simulateFetch('https://sothuchi-sqlite-backend.phamphuongdong.workers.dev', { method: 'POST' });
     assert.strictEqual(res3.bypassed, true, 'POST requests must bypass SW cache');
   });
 

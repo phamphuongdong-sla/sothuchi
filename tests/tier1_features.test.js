@@ -497,7 +497,7 @@ async function runTier1Tests(projectRoot = '/Users/mrdong/So Thu Chi') {
     const localEnv = new TestEnvironment(projectRoot);
     localEnv.loadSourceFiles();
     TestAssert.isOk(localEnv.context.SyncEngine, 'SyncEngine module must be loaded');
-    const valid = localEnv.context.SyncEngine.validateUrl('https://sothuchi-sqlite-backend.mrdong-sothuchi.workers.dev');
+    const valid = localEnv.context.SyncEngine.validateUrl('https://sothuchi-sqlite-backend.phamphuongdong.workers.dev');
     const invalid = localEnv.context.SyncEngine.validateUrl('not-a-valid-url');
     TestAssert.isTrue(valid, 'Valid Worker URL format should pass validation');
     TestAssert.isFalse(invalid, 'Invalid URL format should fail validation');

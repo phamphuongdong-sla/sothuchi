@@ -55,15 +55,20 @@
      * Load settings from LocalStorage.
      */
     getSettings() {
-      const DEFAULT_URL = 'https://sothuchi-sqlite-backend.mrdong-sothuchi.workers.dev';
+      const DEFAULT_URL = 'https://sothuchi-sqlite-backend.phamphuongdong.workers.dev';
       try {
         const s = global.localStorage;
         if (s) {
           const data = s.getItem(this.STORAGE_KEY) || s.getItem(this.LEGACY_KEY);
           if (data) {
             const parsed = JSON.parse(data);
+            let gasUrl = parsed.gasUrl ?? DEFAULT_URL;
+            if (gasUrl && (gasUrl.includes('mrdong-sothuchi.workers.dev') || gasUrl.includes('sothuchi-backend.workers.dev'))) {
+              gasUrl = DEFAULT_URL;
+              this.saveSettings({ gasUrl, autoSync: parsed.autoSync });
+            }
             return {
-              gasUrl: parsed.gasUrl ?? DEFAULT_URL,
+              gasUrl: gasUrl,
               autoSync: parsed.autoSync !== undefined ? Boolean(parsed.autoSync) : true
             };
           }
