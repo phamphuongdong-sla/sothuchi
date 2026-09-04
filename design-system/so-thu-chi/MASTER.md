@@ -6,58 +6,82 @@
 
 ---
 
-**Project:** So Thu Chi
-**Generated:** 2026-08-14 16:41:21
-**Category:** Wedding/Event Planning
+**Project:** Sổ Thu Chi Cá Nhân (PWA)
+**Style Standard:** Fintech Precision & Modern Personal Finance (ui-ux-pro-max / frontend-design)
+**Category:** Personal Finance / Fintech Management
 
 ---
 
 ## Global Rules
 
-### Color Palette
+### Color Palette (Light Theme)
+
+| Role | Hex | CSS Variable | Usage |
+|------|-----|--------------|-------|
+| Primary | `#2563EB` | `--color-primary` | Main brand, primary buttons, active links |
+| Primary Hover | `#1D4ED8` | `--color-primary-hover` | Button hover state |
+| Primary Subtle | `#EFF6FF` | `--color-primary-light` | Active background pills, soft highlights |
+| Background | `#F8FAFC` | `--color-bg` | Page background (Slate 50) |
+| Surface / Card | `#FFFFFF` | `--color-surface` | Card background, inputs |
+| Text Primary | `#0F172A` | `--color-text-primary` | High contrast headings & values (Slate 900) |
+| Text Secondary | `#475569` | `--color-text-secondary` | Labels, notes, secondary info (Slate 600) |
+| Text Muted | `#94A3B8` | `--color-text-muted` | Placeholders, inactive icons (Slate 400) |
+| Border | `#E2E8F0` | `--color-border` | Subtle separators, input borders (Slate 200) |
+
+### Financial Semantic Palette
+
+| Role | Hex | CSS Variable | Soft Background | Usage |
+|------|-----|--------------|-----------------|-------|
+| Income / Profit | `#10B981` | `--income-color` | `rgba(16, 185, 129, 0.12)` | Thu nhập, thặng dư, tài sản tăng |
+| Expense / Loss | `#F43F5E` | `--expense-color` | `rgba(244, 63, 94, 0.12)` | Chi tiêu, nợ, số dư âm |
+| Warning / Alerts | `#F59E0B` | `--color-warning` | `rgba(245, 158, 11, 0.12)` | Cảnh báo ngân sách, hạn thanh toán |
+| Trust / Neutral | `#2563EB` | `--color-info` | `rgba(37, 99, 235, 0.12)` | Tài sản ròng, ví tiền mặt |
+
+### Color Palette (Dark Theme / OLED Mode)
 
 | Role | Hex | CSS Variable |
 |------|-----|--------------|
-| Primary | `#0891B2` | `--color-primary` |
-| Secondary | `#22D3EE` | `--color-secondary` |
-| CTA/Accent | `#22C55E` | `--color-cta` |
-| Background | `#ECFEFF` | `--color-background` |
-| Text | `#164E63` | `--color-text` |
-
-**Color Notes:** Fresh cyan + clean green
+| Primary | `#3B82F6` | `--color-primary` |
+| Primary Hover | `#60A5FA` | `--color-primary-hover` |
+| Background | `#090D16` | `--color-bg` (Deep OLED Slate) |
+| Surface / Card | `#131D31` | `--color-surface` |
+| Text Primary | `#F8FAFC` | `--color-text-primary` |
+| Text Secondary | `#94A3B8` | `--color-text-secondary` |
+| Border | `#1E293B` | `--color-border` |
+| Income | `#34D399` | `--income-color` |
+| Expense | `#FB7185` | `--expense-color` |
 
 ### Typography
 
-- **Heading Font:** Inter
-- **Body Font:** Inter
-- **Mood:** minimal, clean, swiss, functional, neutral, professional
-- **Google Fonts:** [Inter + Inter](https://fonts.google.com/share?selection.family=Inter:wght@300;400;500;600;700)
+- **Heading & Body Font:** `Inter`, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif
+- **Financial Numbers:** `font-variant-numeric: tabular-nums` (Căn thẳng hàng các chữ số tiền VND)
+- **Mood:** Trustworthy, precise, clean, modern, accessible, Swiss clarity
+- **Google Fonts:** [Inter](https://fonts.google.com/share?selection.family=Inter:wght@300;400;500;600;700;800)
 
 **CSS Import:**
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 ```
 
 ### Spacing Variables
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| `--space-xs` | `4px` / `0.25rem` | Tight gaps |
-| `--space-sm` | `8px` / `0.5rem` | Icon gaps, inline spacing |
-| `--space-md` | `16px` / `1rem` | Standard padding |
-| `--space-lg` | `24px` / `1.5rem` | Section padding |
-| `--space-xl` | `32px` / `2rem` | Large gaps |
-| `--space-2xl` | `48px` / `3rem` | Section margins |
-| `--space-3xl` | `64px` / `4rem` | Hero padding |
+| `--space-xs` | `4px` / `0.25rem` | Gaps nhỏ, pill badges |
+| `--space-sm` | `8px` / `0.5rem` | Icon gaps, khoảng cách nội khối |
+| `--space-md` | `16px` / `1rem` | Padding chuẩn cho cards, inputs |
+| `--space-lg` | `24px` / `1.5rem` | Padding phần lớn, card headers |
+| `--space-xl` | `32px` / `2rem` | Khoảng cách giữa các sections |
 
-### Shadow Depths
+### Shadow Depths (Fintech Ambient Tokens)
 
 | Level | Value | Usage |
 |-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
+| `--shadow-xs` | `0 1px 2px 0 rgba(15, 23, 42, 0.04)` | Micro-elements, table rows |
+| `--shadow-sm` | `0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04)` | Cards thông thường, inputs |
+| `--shadow-md` | `0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -2px rgba(15, 23, 42, 0.04)` | Hover lift, dropdowns |
+| `--shadow-lg` | `0 12px 24px -4px rgba(15, 23, 42, 0.08), 0 4px 8px -2px rgba(15, 23, 42, 0.04)` | Modals, sticky toolbars |
+| `--shadow-xl` | `0 20px 32px -6px rgba(15, 23, 42, 0.12), 0 8px 12px -4px rgba(15, 23, 42, 0.06)` | Hero cards, dialog popups |
 
 ---
 
@@ -66,68 +90,97 @@
 ### Buttons
 
 ```css
-/* Primary Button */
+/* Primary Action Button */
 .btn-primary {
-  background: #22C55E;
+  background: var(--color-primary); /* #2563EB */
   color: white;
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: 12px;
   font-weight: 600;
-  transition: all 200ms ease;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  transition: all 150ms ease;
   cursor: pointer;
 }
 
 .btn-primary:hover {
-  opacity: 0.9;
+  background: var(--color-primary-hover); /* #1D4ED8 */
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
   transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
 }
 
 /* Secondary Button */
 .btn-secondary {
-  background: transparent;
-  color: #0891B2;
-  border: 2px solid #0891B2;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: 12px;
   font-weight: 600;
-  transition: all 200ms ease;
+  transition: all 150ms ease;
   cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  border-color: var(--color-text-muted);
 }
 ```
 
-### Cards
+### Cards & KPI Summary Cards
 
 ```css
 .card {
-  background: #ECFEFF;
-  border-radius: 12px;
+  background: var(--color-surface);
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
   padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 150ms ease;
 }
 
 .card:hover {
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
   transform: translateY(-2px);
+}
+
+.summary-card {
+  background: var(--color-surface);
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  padding: 18px 16px;
+  box-shadow: var(--shadow-xs);
+  transition: all 150ms ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(37, 99, 235, 0.25);
 }
 ```
 
 ### Inputs
 
 ```css
-.input {
+.input, .form-control {
   padding: 12px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
   font-size: 16px;
-  transition: border-color 200ms ease;
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
-.input:focus {
-  border-color: #0891B2;
+.input:focus, .form-control:focus {
+  border-color: var(--color-primary);
   outline: none;
-  box-shadow: 0 0 0 3px #0891B220;
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 ```
 

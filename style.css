@@ -4,7 +4,7 @@
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   1. Theme Token System & CSS Custom Properties
+   1. Theme Token System & CSS Custom Properties (Fintech Pro Design System)
    -------------------------------------------------------------------------- */
 :root, [data-theme="light"] {
   /* Safe Area Insets for Mobile Devices */
@@ -14,68 +14,92 @@
   --sar: env(safe-area-inset-right, 0px);
 
   /* Layout Dimensions */
-  --header-height: 56px;
-  --nav-bottom-height: 60px;
-  --sidebar-width: 250px;
+  --header-height: 60px;
+  --nav-bottom-height: 64px;
+  --sidebar-width: 260px;
 
-  /* Color Palette - Light Theme (Cyan/Soft UI Evolution) */
-  --color-primary: #0891B2;       /* Cyan 600 */
-  --color-primary-hover: #06B6D4; /* Cyan 500 */
-  --color-primary-light: #CFFAFE; /* Cyan 100 */
-  --color-bg: #ECFEFF;            /* Cyan 50 */
+  /* Color Palette - Light Theme (Fintech Precision & Trust) */
+  --color-primary: #2563EB;          /* Blue 600 - Confident, Trustworthy */
+  --color-primary-hover: #1D4ED8;    /* Blue 700 */
+  --color-primary-light: #EFF6FF;    /* Blue 50 */
+  --color-primary-subtle: #DBEAFE;   /* Blue 100 */
+  --color-bg: #F8FAFC;               /* Slate 50 - Clean, Modern Neutral */
+  --color-bg-secondary: #F1F5F9;     /* Slate 100 */
   --color-surface: #FFFFFF;
   --color-card: #FFFFFF;
-  --color-text-primary: #164E63;  /* Cyan 900 */
-  --color-text-secondary: #475569;/* Slate 600 */
-  --color-text-muted: #94A3B8;    /* Slate 400 */
-  --color-border: #E2E8F0;
+  --color-text-primary: #0F172A;     /* Slate 900 - High Contrast & Sharp */
+  --color-text-secondary: #475569;   /* Slate 600 - Clear Legibility */
+  --color-text-muted: #94A3B8;       /* Slate 400 */
+  --color-border: #E2E8F0;           /* Slate 200 */
+  --color-border-subtle: #F1F5F9;
 
-  /* Financial & Status Colors */
-  --income-color: #22C55E;        /* Green 500 */
-  --income-bg: #DCFCE7;           /* Green 100 */
-  --expense-color: #EF4444;       /* Red 500 */
-  --expense-bg: #FEE2E2;          /* Red 100 */
-  --color-success: #22C55E;
-  --color-danger: #EF4444;
+  /* Financial & Semantic Status Colors */
+  --income-color: #10B981;           /* Emerald 500 */
+  --income-hover: #059669;           /* Emerald 600 */
+  --income-bg: rgba(16, 185, 129, 0.12);
+  --income-border: rgba(16, 185, 129, 0.25);
+  --expense-color: #F43F5E;          /* Rose 500 */
+  --expense-hover: #E11D48;          /* Rose 600 */
+  --expense-bg: rgba(244, 63, 94, 0.12);
+  --expense-border: rgba(244, 63, 94, 0.25);
+  --color-success: #10B981;
+  --color-danger: #F43F5E;
   --color-warning: #F59E0B;
-  --color-info: #0891B2;
+  --color-info: #2563EB;
 
-  /* Shadows & Radius (Soft Shadows) */
-  --shadow-sm: 0 1px 3px 0 rgba(8, 145, 178, 0.05), 0 1px 2px -1px rgba(8, 145, 178, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(8, 145, 178, 0.08), 0 2px 4px -2px rgba(8, 145, 178, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(8, 145, 178, 0.1), 0 4px 6px -4px rgba(8, 145, 178, 0.05);
+  /* Shadows & Depth Elevation (Layered Ambient + Key Light) */
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -2px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 24px -4px rgba(15, 23, 42, 0.08), 0 4px 8px -2px rgba(15, 23, 42, 0.04);
+  --shadow-xl: 0 20px 32px -6px rgba(15, 23, 42, 0.12), 0 8px 12px -4px rgba(15, 23, 42, 0.06);
+
+  /* Radius Tokens */
+  --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
+  --radius-xl: 20px;
   --radius-full: 9999px;
 
   /* Transitions */
   --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 [data-theme="dark"] {
-  /* Color Palette - Dark Theme Overrides */
-  --color-primary: #22D3EE;       /* Cyan 400 */
-  --color-primary-hover: #67E8F9; /* Cyan 300 */
-  --color-primary-light: rgba(34, 211, 238, 0.15);
-  --color-bg: #083344;            /* Cyan 950 */
-  --color-surface: #164E63;       /* Cyan 900 */
-  --color-card: #164E63;          /* Cyan 900 */
-  --color-text-primary: #ECFEFF;  /* Cyan 50 */
-  --color-text-secondary: #CFFAFE;/* Cyan 100 */
-  --color-text-muted: #A5F3FC;    /* Cyan 200 */
-  --color-border: #0B3E52;
+  /* Color Palette - Dark Theme Overrides (Fintech Dark Slate/OLED) */
+  --color-primary: #3B82F6;          /* Blue 500 */
+  --color-primary-hover: #60A5FA;    /* Blue 400 */
+  --color-primary-light: rgba(59, 130, 246, 0.15);
+  --color-primary-subtle: rgba(59, 130, 246, 0.25);
+  --color-bg: #090D16;               /* Deep Slate 950 / OLED Midnight */
+  --color-bg-secondary: #0F172A;     /* Slate 900 */
+  --color-surface: #131D31;          /* Refined Dark Card Surface */
+  --color-card: #131D31;
+  --color-text-primary: #F8FAFC;     /* Slate 50 */
+  --color-text-secondary: #94A3B8;   /* Slate 400 */
+  --color-text-muted: #64748B;       /* Slate 500 */
+  --color-border: #1E293B;           /* Slate 800 */
+  --color-border-subtle: #1E293B;
 
-  /* Financial & Status Colors */
-  --income-color: #4ADE80;        /* Green 400 */
-  --income-bg: rgba(74, 222, 128, 0.15);
-  --expense-color: #F87171;       /* Red 400 */
-  --expense-bg: rgba(248, 113, 113, 0.15);
+  /* Financial & Status Colors - Dark Mode */
+  --income-color: #34D399;           /* Emerald 400 */
+  --income-hover: #10B981;
+  --income-bg: rgba(52, 211, 153, 0.15);
+  --income-border: rgba(52, 211, 153, 0.3);
+  --expense-color: #FB7185;          /* Rose 400 */
+  --expense-hover: #F43F5E;
+  --expense-bg: rgba(251, 113, 133, 0.15);
+  --expense-border: rgba(251, 113, 133, 0.3);
 
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6);
+  /* Shadows - Dark Mode Glow & Elevation */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.6), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.7), 0 4px 8px -2px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 32px -6px rgba(0, 0, 0, 0.85);
 }
 
 /* Global Theme Transition */
@@ -100,6 +124,29 @@ html {
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
   scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Accessibility Focus Visible Ring */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Tabular Numerals for Financial Data */
+.amount-input,
+.summary-value,
+.item-amount,
+.wallet-balance,
+.stat-value,
+.expense-amount-val,
+.asset-val-text,
+.tx-amount,
+.mom-badge,
+.rule-header span {
+  font-variant-numeric: tabular-nums;
 }
 
 body {
@@ -107,6 +154,7 @@ body {
   min-height: 100dvh;
   overflow-x: hidden;
   background-color: var(--color-bg);
+  color: var(--color-text-primary);
 }
 
 /* --------------------------------------------------------------------------
@@ -130,20 +178,25 @@ body {
   gap: 0.5rem;
   height: calc(var(--header-height) + var(--sat));
   padding-top: var(--sat);
-  padding-left: max(0.85rem, var(--sal));
-  padding-right: max(0.85rem, var(--sar));
-  background-color: var(--color-surface);
+  padding-left: max(1rem, var(--sal));
+  padding-right: max(1rem, var(--sar));
+  background-color: rgba(255, 255, 255, 0.92);
   border-bottom: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-xs);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   flex-wrap: nowrap;
+}
+
+[data-theme="dark"] .app-header {
+  background-color: rgba(19, 29, 49, 0.92);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
 }
 
 .header-brand {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.65rem;
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -152,29 +205,29 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: transparent;
   padding: 0;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease;
+  transition: transform var(--transition-bounce), filter var(--transition-fast);
   flex-shrink: 0;
 }
 
 .brand-icon-wrapper:hover {
   transform: scale(1.08) rotate(-3deg);
-  filter: drop-shadow(0 4px 12px rgba(37, 99, 235, 0.4));
+  filter: drop-shadow(0 4px 12px rgba(37, 99, 235, 0.3));
 }
 
 .brand-icon-img {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .nav-brand-desktop .brand-icon-wrapper .brand-icon-img {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
 }
 
 .brand-icon {
@@ -182,18 +235,18 @@ body {
 }
 
 .app-title {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--color-text-primary);
   white-space: nowrap;
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.5rem;
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -308,27 +361,34 @@ body {
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
 }
 
-/* Theme Toggle Button */
+/* Theme Toggle & Action Icon Buttons */
 .icon-btn {
-  background: var(--color-bg);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   font-size: 1.05rem;
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
   transition: all var(--transition-fast);
   flex-shrink: 0;
+  box-shadow: var(--shadow-xs);
 }
 
 .icon-btn:hover {
   background-color: var(--color-primary-light);
   border-color: var(--color-primary);
-  transform: scale(1.05);
+  color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
 }
 
 /* --------------------------------------------------------------------------
@@ -340,12 +400,19 @@ body {
   left: 0;
   right: 0;
   z-index: 100;
-  background-color: var(--color-surface);
+  background-color: rgba(255, 255, 255, 0.94);
   border-top: 1px solid var(--color-border);
   padding-bottom: var(--sab);
   padding-left: var(--sal);
   padding-right: var(--sar);
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+[data-theme="dark"] .app-nav {
+  background-color: rgba(19, 29, 49, 0.94);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .nav-brand-desktop {
@@ -358,6 +425,7 @@ body {
   align-items: center;
   list-style: none;
   height: var(--nav-bottom-height);
+  padding: 0 0.25rem;
 }
 
 .nav-item {
@@ -370,19 +438,34 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.2rem;
+  gap: 0.25rem;
   height: 100%;
   text-decoration: none;
   color: var(--color-text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 500;
-  padding: 0.25rem 0;
-  transition: color var(--transition-fast);
-  min-height: 44px;
+  padding: 0.35rem 0.25rem;
+  transition: all var(--transition-fast);
+  min-height: 48px;
+  position: relative;
+  border-radius: var(--radius-sm);
 }
 
 .nav-link .nav-icon {
   font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--transition-bounce), color var(--transition-fast);
+}
+
+.nav-link .nav-label {
+  transition: color var(--transition-fast), font-weight var(--transition-fast);
+  letter-spacing: -0.01em;
+}
+
+.nav-link:hover {
+  color: var(--color-primary);
 }
 
 .nav-link.active {
@@ -390,13 +473,18 @@ body {
   font-weight: 600;
 }
 
+.nav-link.active .nav-icon {
+  transform: translateY(-2px) scale(1.12);
+  color: var(--color-primary);
+}
+
 /* --------------------------------------------------------------------------
    5. Main View Container & Panels
    -------------------------------------------------------------------------- */
 .main-content {
   flex: 1;
-  padding: 1rem;
-  padding-bottom: calc(var(--nav-bottom-height) + var(--sab) + 1rem);
+  padding: 1.25rem;
+  padding-bottom: calc(var(--nav-bottom-height) + var(--sab) + 1.25rem);
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
@@ -408,11 +496,11 @@ body {
 
 .view-panel.active {
   display: block;
-  animation: fadeIn 0.2s ease-in-out;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -444,7 +532,7 @@ body {
     border-top: none;
     border-right: 1px solid var(--color-border);
     box-shadow: none;
-    padding-bottom: 1rem;
+    padding-bottom: 1.5rem;
     padding-top: var(--sat);
     display: flex;
     flex-direction: column;
@@ -462,7 +550,8 @@ body {
   .nav-brand-desktop .brand-name {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--color-primary);
+    color: var(--color-text-primary);
+    letter-spacing: -0.02em;
   }
 
   .header-brand {
@@ -473,8 +562,8 @@ body {
     flex-direction: column;
     justify-content: flex-start;
     height: auto;
-    padding: 1rem 0.75rem;
-    gap: 0.5rem;
+    padding: 1.25rem 0.85rem;
+    gap: 0.4rem;
   }
 
   .nav-item {
@@ -485,19 +574,27 @@ body {
   .nav-link {
     flex-direction: row;
     justify-content: flex-start;
-    gap: 0.75rem;
+    gap: 0.85rem;
     padding: 0.75rem 1rem;
     border-radius: var(--radius-md);
-    font-size: 0.95rem;
+    font-size: 0.925rem;
+    color: var(--color-text-secondary);
   }
 
   .nav-link:hover {
-    background-color: var(--color-bg);
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    transform: none;
   }
 
   .nav-link.active {
     background-color: var(--color-primary-light);
     color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  .nav-link.active .nav-icon {
+    transform: scale(1.05);
   }
 
   /* Desktop Header */
@@ -517,12 +614,12 @@ body {
    Financial Overview Hero Dashboard Card
    -------------------------------------------------------------------------- */
 .financial-hero-card {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
   color: #ffffff;
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  border-radius: var(--radius-xl);
+  padding: 1.75rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.35);
   position: relative;
   overflow: hidden;
 }
@@ -637,55 +734,65 @@ body {
   background-color: var(--color-surface);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
-  padding: 1.25rem;
+  padding: 1.5rem;
   box-shadow: var(--shadow-sm);
   margin-bottom: 1.5rem;
+  transition: box-shadow var(--transition-normal);
 }
 
-.card-header {
+.card-header,
+.form-header {
   margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
-.card-title {
+.card-title,
+.form-title {
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--color-text-primary);
+  letter-spacing: -0.02em;
 }
 
-.card-subtitle {
+.card-subtitle,
+.form-subtitle {
   font-size: 0.85rem;
   color: var(--color-text-secondary);
-  margin-top: 0.2rem;
+  margin-top: 0.25rem;
+  line-height: 1.4;
 }
 
 /* Form Groups & Controls */
 .form-group {
-  margin-bottom: 1.15rem;
+  margin-bottom: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
 .form-label {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--color-text-primary);
+  letter-spacing: -0.01em;
 }
 
 .required-star {
   color: var(--color-danger);
+  font-weight: 700;
 }
 
 .form-control {
   width: 100%;
   padding: 0.75rem 1rem;
-  font-size: 1rem;
+  font-size: 0.95rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  background-color: var(--color-bg);
+  background-color: var(--color-surface);
   color: var(--color-text-primary);
   outline: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
 }
 
 .form-control:focus {
@@ -702,7 +809,7 @@ body {
   display: flex;
   gap: 0.5rem;
   background-color: var(--color-bg);
-  padding: 0.25rem;
+  padding: 0.35rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
 }
@@ -720,26 +827,33 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.65rem;
+  padding: 0.75rem 0.5rem;
   font-size: 0.95rem;
   font-weight: 600;
   border-radius: var(--radius-sm);
   cursor: pointer;
   color: var(--color-text-secondary);
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  transition: all var(--transition-fast);
   user-select: none;
+}
+
+.type-toggle-btn:hover {
+  color: var(--color-text-primary);
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 .type-radio-input:checked + .type-btn-expense {
   background-color: var(--expense-bg);
   color: var(--expense-color);
-  border: 1px solid var(--expense-color);
+  border: 1px solid var(--expense-border);
+  box-shadow: var(--shadow-xs);
 }
 
 .type-radio-input:checked + .type-btn-income {
   background-color: var(--income-bg);
   color: var(--income-color);
-  border: 1px solid var(--income-color);
+  border: 1px solid var(--income-border);
+  box-shadow: var(--shadow-xs);
 }
 
 /* Amount Input Wrapper */
@@ -750,26 +864,28 @@ body {
 }
 
 .amount-input {
-  font-size: 1.25rem;
-  font-weight: 700;
-  padding-right: 2.5rem;
-  letter-spacing: 0.5px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  padding-right: 2.75rem;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
 }
 
 .currency-suffix {
   position: absolute;
-  right: 1rem;
-  font-size: 1.1rem;
+  right: 1.15rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  color: var(--color-text-muted);
+  color: var(--color-primary);
   pointer-events: none;
+  opacity: 0.85;
 }
 
 /* Buttons */
 .form-actions {
   display: flex;
   gap: 0.75rem;
-  margin-top: 1.5rem;
+  margin-top: 1.75rem;
 }
 
 .btn {
@@ -781,31 +897,44 @@ body {
   font-size: 0.95rem;
   font-weight: 600;
   border-radius: var(--radius-md);
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: background-color var(--transition-fast), transform var(--transition-fast);
-  min-height: 44px;
+  transition: all var(--transition-fast);
+  min-height: 46px;
+  line-height: 1.2;
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.98);
 }
 
 .btn-primary {
   flex: 2;
   background-color: var(--color-primary);
   color: #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 
 .btn-primary:hover {
   background-color: var(--color-primary-hover);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
   flex: 1;
-  background-color: var(--color-bg);
+  background-color: var(--color-surface);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xs);
 }
 
 .btn-secondary:hover {
-  background-color: var(--color-border);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  border-color: var(--color-text-muted);
+  transform: translateY(-1px);
 }
 
 /* Field Error Hints */
@@ -869,14 +998,15 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  background-color: var(--color-bg);
-  padding: 1rem;
-  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  padding: 1.15rem;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   margin-bottom: 1.25rem;
   max-width: 100%;
   overflow: hidden;
   box-sizing: border-box;
+  box-shadow: var(--shadow-xs);
 }
 
 .search-wrapper {
@@ -890,18 +1020,31 @@ body {
 
 .search-icon {
   position: absolute;
-  left: 0.85rem;
+  left: 0.95rem;
   color: var(--color-text-muted);
   pointer-events: none;
+  font-size: 1rem;
 }
 
 .search-input {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding-left: 2.3rem;
+  padding-left: 2.5rem;
   padding-right: 2.2rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  font-size: 0.925rem;
   text-overflow: ellipsis;
+  transition: all var(--transition-fast);
+}
+
+.search-input:focus {
+  background-color: var(--color-surface);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
 .clear-search-btn {
@@ -909,10 +1052,16 @@ body {
   right: 0.75rem;
   background: none;
   border: none;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: var(--color-text-muted);
   cursor: pointer;
   padding: 0.2rem;
+  border-radius: var(--radius-full);
+  transition: color var(--transition-fast);
+}
+
+.clear-search-btn:hover {
+  color: var(--color-text-primary);
 }
 
 .filter-row {
@@ -935,8 +1084,9 @@ body {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-text-secondary);
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.3rem;
   display: block;
+  letter-spacing: -0.01em;
 }
 
 .date-range-row {
@@ -946,7 +1096,7 @@ body {
 .date-input-group {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
@@ -958,9 +1108,18 @@ body {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 0.55rem 0.4rem;
+  padding: 0.6rem 0.5rem;
   font-size: 0.85rem;
   text-overflow: ellipsis;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+.date-input-group input[type="date"]:focus {
+  background-color: var(--color-surface);
+  border-color: var(--color-primary);
 }
 
 .date-sep {
@@ -978,8 +1137,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 0.75rem;
-  background-color: var(--color-bg);
+  padding: 0.55rem 0.85rem;
+  background-color: var(--color-bg-secondary);
   border-radius: var(--radius-sm);
   border-left: 3px solid var(--color-primary);
   margin-bottom: 0.5rem;
@@ -1001,56 +1160,66 @@ body {
 .income-badge {
   background-color: var(--income-bg);
   color: var(--income-color);
-  padding: 0.15rem 0.4rem;
+  padding: 0.15rem 0.45rem;
   border-radius: var(--radius-sm);
+  border: 1px solid var(--income-border);
+  font-variant-numeric: tabular-nums;
 }
 
 .expense-badge {
   background-color: var(--expense-bg);
   color: var(--expense-color);
-  padding: 0.15rem 0.4rem;
+  padding: 0.15rem 0.45rem;
   border-radius: var(--radius-sm);
+  border: 1px solid var(--expense-border);
+  font-variant-numeric: tabular-nums;
 }
 
 .history-group-items {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
 .history-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
   background-color: var(--color-surface);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: var(--shadow-xs);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 .history-item:hover {
   box-shadow: var(--shadow-sm);
+  border-color: rgba(37, 99, 235, 0.25);
+  transform: translateY(-1px);
 }
 
 .item-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-full);
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   background-color: var(--color-bg);
   flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 
 .history-item.income .item-icon {
   background-color: var(--income-bg);
+  color: var(--income-color);
 }
 
 .history-item.expense .item-icon {
   background-color: var(--expense-bg);
+  color: var(--expense-color);
 }
 
 .item-details {
@@ -1059,12 +1228,13 @@ body {
 }
 
 .item-category {
-  font-size: 0.9rem;
+  font-size: 0.925rem;
   font-weight: 600;
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
 .item-note {
@@ -1073,6 +1243,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-top: 0.1rem;
 }
 
 /* item-right: groups amount + actions on the right side */
@@ -1080,15 +1251,15 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.2rem;
+  gap: 0.25rem;
   flex-shrink: 0;
 }
 
-
 .item-amount {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
   white-space: nowrap;
+  letter-spacing: -0.01em;
 }
 
 .income-text { color: var(--income-color); }
@@ -1096,7 +1267,7 @@ body {
 
 .item-actions {
   display: flex;
-  gap: 0.15rem;
+  gap: 0.25rem;
 }
 
 .btn-icon {
@@ -1106,41 +1277,57 @@ body {
   padding: 0.35rem;
   border-radius: var(--radius-sm);
   font-size: 0.95rem;
-  transition: background-color var(--transition-fast);
+  color: var(--color-text-muted);
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-icon:hover {
   background-color: var(--color-bg);
+  color: var(--color-text-primary);
 }
 
 /* Empty State */
 .empty-state {
   text-align: center;
-  padding: 2.5rem 1rem;
+  padding: 3rem 1.5rem;
   color: var(--color-text-muted);
 }
 
 .empty-icon {
-  font-size: 2.5rem;
+  font-size: 2.75rem;
   margin-bottom: 0.5rem;
+  opacity: 0.85;
 }
 
 .empty-hint {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   margin-top: 0.35rem;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 /* Pagination / Load More */
 .pagination-container {
   display: flex;
   justify-content: center;
-  margin-top: 1rem;
+  margin-top: 1.25rem;
 }
 
 .btn-load-more {
-  padding: 0.6rem 1.5rem;
+  padding: 0.65rem 1.75rem;
   font-size: 0.875rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xs);
+  border-radius: var(--radius-md);
+}
+
+.btn-load-more:hover {
+  background-color: var(--color-bg);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .badge-count {
@@ -1156,8 +1343,9 @@ body {
   right: 0;
   bottom: 0;
   z-index: 1000;
-  background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1175,10 +1363,16 @@ body {
   max-height: 90vh;
   overflow-y: auto;
   background-color: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
   border: 1px solid var(--color-border);
-  padding: 1.25rem;
+  padding: 1.5rem;
+  animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .modal-dialog-sm {
@@ -1190,13 +1384,15 @@ body {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--color-border);
-  padding-bottom: 0.75rem;
-  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  margin-bottom: 1.25rem;
 }
 
 .modal-title {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
 }
 
 .modal-close-btn {
@@ -1206,27 +1402,38 @@ body {
   line-height: 1;
   color: var(--color-text-muted);
   cursor: pointer;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.modal-close-btn:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
 }
 
 .btn-danger {
   background-color: var(--color-danger);
   color: #ffffff;
+  box-shadow: 0 2px 6px rgba(244, 63, 94, 0.25);
 }
 
 .btn-danger:hover {
-  background-color: #dc2626;
+  background-color: var(--expense-hover);
+  box-shadow: 0 4px 12px rgba(244, 63, 94, 0.35);
+  transform: translateY(-1px);
 }
 
 .delete-summary-card {
   background-color: var(--color-bg);
-  padding: 0.85rem;
+  padding: 1rem;
   border-radius: var(--radius-md);
-  margin-top: 0.85rem;
+  margin-top: 1rem;
   border-left: 4px solid var(--color-danger);
   font-size: 0.875rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 /* Visual Statistics & Chart.js Reports Styles */
@@ -1236,8 +1443,8 @@ body {
   background-color: var(--color-surface);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
-  padding: 1rem 1.25rem;
-  margin-bottom: 1rem;
+  padding: 1.15rem 1.35rem;
+  margin-bottom: 1.25rem;
   box-shadow: var(--shadow-sm);
 }
 
@@ -1263,66 +1470,95 @@ body {
 .reports-summary-cards {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
+  gap: 0.85rem;
+  margin-bottom: 1.5rem;
 }
 
 @media (min-width: 768px) {
   .reports-summary-cards {
     grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
+    gap: 1.15rem;
   }
 }
 
 .summary-card {
   background-color: var(--color-surface);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
-  padding: 1rem;
+  padding: 1.15rem 1rem;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  gap: 0.85rem;
+  box-shadow: var(--shadow-xs);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 .summary-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+  border-color: rgba(37, 99, 235, 0.25);
 }
 
 .card-icon {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 46px;
+  height: 46px;
   border-radius: var(--radius-md);
   background-color: var(--color-bg);
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+.card-income .card-icon {
+  background-color: var(--income-bg);
+  color: var(--income-color);
+}
+
+.card-expense .card-icon {
+  background-color: var(--expense-bg);
+  color: var(--expense-color);
+}
+
+.card-balance .card-icon {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.card-savings .card-icon {
+  background-color: rgba(245, 158, 11, 0.12);
+  color: #d97706;
 }
 
 .card-info {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .summary-label {
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.72rem;
+  font-weight: 600;
   color: var(--color-text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .summary-value {
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 800;
   color: var(--color-text-primary);
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
+  letter-spacing: -0.02em;
+  margin-top: 0.1rem;
 }
 
 /* Card Specific Text Colors */
@@ -2583,8 +2819,8 @@ optgroup option {
 /* Wallets & Accounts Grid & Cards */
 .wallets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.85rem;
   padding-top: 0.5rem;
 }
 
@@ -2592,18 +2828,31 @@ optgroup option {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 0.85rem;
+  padding: 1.15rem 1rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
   position: relative;
   overflow: hidden;
 }
 
+.wallet-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary), #38BDF8);
+  opacity: 0.8;
+}
+
 .wallet-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(37, 99, 235, 0.25);
 }
 
 .wallet-card-header {
@@ -2616,7 +2865,7 @@ optgroup option {
 .wallet-title-wrapper {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
 .wallet-icon {
@@ -2625,26 +2874,29 @@ optgroup option {
 
 .wallet-name {
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.925rem;
   color: var(--color-text-primary);
+  letter-spacing: -0.01em;
 }
 
 .wallet-type-badge {
   font-size: 0.65rem;
   font-weight: 600;
-  padding: 0.1rem 0.35rem;
+  padding: 0.15rem 0.45rem;
   border-radius: var(--radius-sm);
   background: var(--color-bg);
   color: var(--color-text-secondary);
   text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .wallet-balance {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--color-text-primary);
-  margin-top: 0.25rem;
-  margin-bottom: 0.5rem;
+  margin-top: 0.35rem;
+  margin-bottom: 0.6rem;
+  letter-spacing: -0.02em;
 }
 
 .wallet-actions {
